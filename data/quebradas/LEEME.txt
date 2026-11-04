@@ -1,0 +1,1 @@
+Exporta desde QGIS cada polígono como GeoJSON (WGS84 / EPSG:4326) y nómbralo exactamente como los archivos indicados en js/datos.js. Sube aquí los ocho .geojson.

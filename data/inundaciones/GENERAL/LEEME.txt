@@ -1,0 +1,1 @@
+Crea carpetas por objetivo y subcarpetas si lo deseas. Las rutas del manifest.json son relativas a data/inundaciones/. Coloca tus PNG en las rutas indicadas y edita manifest.json para cada caudal de diseño/escenario.

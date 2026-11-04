@@ -1,0 +1,17 @@
+{
+  "instrucciones": "Cada escenario debe tener objetivo, caudal_referencia y seis rutas PNG. El sistema escoge el caudal_referencia más cercano al máximo caudal de la serie seleccionada.",
+  "scenarios": [
+    {
+      "objetivo": "GENERAL",
+      "caudal_referencia": 100,
+      "imagenes": {
+        "12": "GENERAL/Q100_h12.png",
+        "24": "GENERAL/Q100_h24.png",
+        "36": "GENERAL/Q100_h36.png",
+        "48": "GENERAL/Q100_h48.png",
+        "60": "GENERAL/Q100_h60.png",
+        "72": "GENERAL/Q100_h72.png"
+      }
+    }
+  ]
+}
