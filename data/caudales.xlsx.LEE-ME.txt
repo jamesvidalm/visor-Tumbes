@@ -1,0 +1,1 @@
+Sube aquí tu Excel y renómbralo exactamente caudales.xlsx. Debe tener la columna fecha y las columnas Q indicadas en js/datos.js.
