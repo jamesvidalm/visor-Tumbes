@@ -1,9 +1,7 @@
-// ============================================================
+
+ // ============================================================
  // HIDROGRAMAS - CUENCA DEL RIO TUMBES
- // - Cabo Inga observado: linea suavizada
- // - Pronostico: inicia en el ultimo dato observado
- // - Incertidumbre: +/- 20 %
- // - Umbrales: 600, 800 y 1000 m3/s
+ // OBSERVADO + PRONOSTICADO + BANDA DE INCERTIDUMBRE
  // ============================================================
 
 window.renderHydrograph = function (item, rows) {
@@ -31,78 +29,81 @@ window.renderHydrograph = function (item, rows) {
     }
 
     const dates = rows.map(r => window.parseDate(r.fecha));
+
     const traces = [];
     let totalValid = 0;
 
-    // Correspondencia entre observado y pronosticado
+    // Colores
+    const COLOR_OBSERVADO = "#38bdf8";
+    const COLOR_PRONOSTICO = "#a78bfa";
+    const COLOR_BANDA = "rgba(167,139,250,0.18)";
+
     const forecastPairs = {
         "Q_TIGRE_P": "Q_TIGRE",
         "Q_CABOINGA_P": "Q_CABOINGA"
     };
 
-    // --------------------------------------------------------
-    // 1. SERIES OBSERVADAS
-    // --------------------------------------------------------
+    // ========================================================
+    // 1. CAUDALES OBSERVADOS
+    // ========================================================
 
     columns.forEach((column, i) => {
 
         if (forecastPairs[column]) return;
 
         const values = rows.map(r => {
+
             const value = r[column];
 
             if (
                 value === null ||
                 value === undefined ||
                 String(value).trim() === ""
-            ) return null;
+            ) {
+                return null;
+            }
 
             const n = Number(value);
+
             return Number.isFinite(n) ? n : null;
         });
 
-        const validIndices = values
-            .map((v, index) => v !== null && dates[index] ? index : -1)
-            .filter(index => index >= 0);
+        const validCount = values.filter(v => v !== null).length;
 
-        if (!validIndices.length) return;
+        if (validCount === 0) return;
 
-        totalValid += validIndices.length;
+        totalValid += validCount;
 
         const label = labels[i] || column;
 
-        let mode = "lines";
-        let color = "#42c8e8";
         let line = {
-            color,
-            width: 2.5
+            color: COLOR_OBSERVADO,
+            width: 2.8
         };
 
-        // Cabo Inga observado: línea suavizada
+        // Cabo Inga: unir observaciones con línea suavizada
         if (column === "Q_CABOINGA") {
-            mode = "lines";
             line = {
-                color: "#42c8e8",
-                width: 2.8,
+                color: COLOR_OBSERVADO,
+                width: 3,
                 shape: "spline",
                 smoothing: 1.15
             };
         }
 
-        // El Tigre observado: línea normal con interrupciones
+        // El Tigre: línea observada respetando datos faltantes
         if (column === "Q_TIGRE") {
-            mode = "lines";
             line = {
-                color: "#42c8e8",
-                width: 2.5
+                color: COLOR_OBSERVADO,
+                width: 2.8
             };
         }
 
         // Quebradas
         if (column.startsWith("QD_")) {
             line = {
-                color: "#42c8e8",
-                width: 2.5
+                color: COLOR_OBSERVADO,
+                width: 2.8
             };
         }
 
@@ -110,28 +111,30 @@ window.renderHydrograph = function (item, rows) {
             x: dates,
             y: values,
             type: "scatter",
-            mode,
-            name: label,
+            mode: "lines",
+            name: "Caudal observado",
+            legendgroup: "observado",
+            showlegend: true,
             connectgaps: false,
-            line,
+            line: line,
             hovertemplate:
                 "%{x|%d/%m/%Y %H:%M}" +
                 "<br>Caudal observado: %{y:.2f} m³/s" +
-                "<extra>" + label + "</extra>"
+                "<extra></extra>"
         });
     });
 
-    // --------------------------------------------------------
-    // 2. PRONOSTICOS Y BANDA DE INCERTIDUMBRE
-    // --------------------------------------------------------
+    // ========================================================
+    // 2. CAUDALES PRONOSTICADOS Y BANDA +/- 20 %
+    // ========================================================
 
-    columns.forEach((forecastColumn, i) => {
+    columns.forEach((forecastColumn) => {
 
         const observedColumn = forecastPairs[forecastColumn];
 
         if (!observedColumn) return;
 
-        // Buscar último dato observado válido
+        // Buscar última observación válida
         let lastObservedIndex = -1;
 
         for (let j = rows.length - 1; j >= 0; j--) {
@@ -150,46 +153,26 @@ window.renderHydrograph = function (item, rows) {
             }
         }
 
-        if (lastObservedIndex < 0) {
-            console.log(
-                "No hay observaciones para iniciar el pronóstico:",
-                observedColumn
-            );
-            return;
-        }
+        if (lastObservedIndex < 0) return;
 
         const lastObservedValue =
             Number(rows[lastObservedIndex][observedColumn]);
 
-        const lastObservedDate = dates[lastObservedIndex];
+        const lastObservedDate =
+            dates[lastObservedIndex];
 
-        // Obtener únicamente pronósticos posteriores
+        // Solo datos posteriores al último observado
         const forecastIndices = [];
 
         for (let j = lastObservedIndex + 1; j < rows.length; j++) {
-
-            const value = rows[j][forecastColumn];
-
-            if (!dates[j]) continue;
-
-            if (
-                value === null ||
-                value === undefined ||
-                String(value).trim() === ""
-            ) {
-                forecastIndices.push(j);
-                continue;
-            }
-
-            if (Number.isFinite(Number(value))) {
-                forecastIndices.push(j);
-            } else {
+            if (dates[j]) {
                 forecastIndices.push(j);
             }
         }
 
         const validForecastIndices = forecastIndices.filter(j => {
             const value = rows[j][forecastColumn];
+
             return (
                 value !== null &&
                 value !== undefined &&
@@ -198,22 +181,21 @@ window.renderHydrograph = function (item, rows) {
             );
         });
 
-        if (!validForecastIndices.length) {
-            console.log("No hay pronóstico disponible:", forecastColumn);
-            return;
-        }
+        if (!validForecastIndices.length) return;
 
         totalValid += validForecastIndices.length;
 
-        // El pronóstico comienza en el último dato observado
+        // Eje temporal del pronóstico
         const xForecast = [
             lastObservedDate,
             ...forecastIndices.map(j => dates[j])
         ];
 
+        // Pronóstico central
         const yForecast = [
             lastObservedValue,
             ...forecastIndices.map(j => {
+
                 const value = rows[j][forecastColumn];
 
                 if (
@@ -221,16 +203,19 @@ window.renderHydrograph = function (item, rows) {
                     value === undefined ||
                     String(value).trim() === "" ||
                     !Number.isFinite(Number(value))
-                ) return null;
+                ) {
+                    return null;
+                }
 
                 return Number(value);
             })
         ];
 
-        // Banda de incertidumbre +/- 20 %
+        // Límite inferior -20 %
         const lower = [
             lastObservedValue,
             ...forecastIndices.map(j => {
+
                 const value = rows[j][forecastColumn];
 
                 if (
@@ -238,15 +223,19 @@ window.renderHydrograph = function (item, rows) {
                     value === undefined ||
                     String(value).trim() === "" ||
                     !Number.isFinite(Number(value))
-                ) return null;
+                ) {
+                    return null;
+                }
 
                 return Math.max(0, Number(value) * 0.80);
             })
         ];
 
+        // Límite superior +20 %
         const upper = [
             lastObservedValue,
             ...forecastIndices.map(j => {
+
                 const value = rows[j][forecastColumn];
 
                 if (
@@ -254,49 +243,45 @@ window.renderHydrograph = function (item, rows) {
                     value === undefined ||
                     String(value).trim() === "" ||
                     !Number.isFinite(Number(value))
-                ) return null;
+                ) {
+                    return null;
+                }
 
-                return Math.max(0, Number(value) * 1.20);
+                return Number(value) * 1.20;
             })
         ];
 
-        const forecastLabel =
-            labels[i] || "Caudal pronosticado";
-
-        const bandColor = "rgba(245,158,11,0.18)";
-
-        // Límite inferior
+        // Banda inferior: oculta de la leyenda
         traces.push({
             x: xForecast,
             y: lower,
             type: "scatter",
             mode: "lines",
-            name: "Límite inferior (-20 %)",
             line: {
-                color: "rgba(245,158,11,0)",
+                color: "rgba(167,139,250,0)",
                 width: 0.5
             },
             connectgaps: false,
-            hoverinfo: "skip",
-            showlegend: true
+            showlegend: false,
+            hoverinfo: "skip"
         });
 
-        // Límite superior y relleno de banda
+        // Banda superior: relleno entre ambos límites
+        // También oculta de la leyenda
         traces.push({
             x: xForecast,
             y: upper,
             type: "scatter",
             mode: "lines",
-            name: "Banda de incertidumbre (±20 %)",
             line: {
-                color: "rgba(245,158,11,0)",
+                color: "rgba(167,139,250,0)",
                 width: 0.5
             },
             fill: "tonexty",
-            fillcolor: bandColor,
+            fillcolor: COLOR_BANDA,
             connectgaps: false,
-            hoverinfo: "skip",
-            showlegend: true
+            showlegend: false,
+            hoverinfo: "skip"
         });
 
         // Línea central del pronóstico
@@ -305,23 +290,25 @@ window.renderHydrograph = function (item, rows) {
             y: yForecast,
             type: "scatter",
             mode: "lines",
-            name: forecastLabel,
+            name: "Caudal pronosticado",
+            legendgroup: "pronosticado",
+            showlegend: true,
+            connectgaps: false,
             line: {
-                color: "#f59e0b",
+                color: COLOR_PRONOSTICO,
                 width: 3,
                 dash: "solid"
             },
-            connectgaps: false,
             hovertemplate:
                 "%{x|%d/%m/%Y %H:%M}" +
                 "<br>Caudal pronosticado: %{y:.2f} m³/s" +
-                "<extra>" + forecastLabel + "</extra>"
+                "<extra></extra>"
         });
     });
 
-    // --------------------------------------------------------
+    // ========================================================
     // 3. UMBRALES PARA EL TIGRE Y CABO INGA
-    // --------------------------------------------------------
+    // ========================================================
 
     const nombre = String(item.nombre || "").toLowerCase();
 
@@ -387,12 +374,14 @@ window.renderHydrograph = function (item, rows) {
         });
     }
 
-    // --------------------------------------------------------
+    // ========================================================
     // 4. ESCALA VERTICAL
-    // --------------------------------------------------------
+    // ========================================================
 
     const allValues = traces.flatMap(t =>
-        (t.y || []).filter(v => v !== null && Number.isFinite(v))
+        (t.y || []).filter(v =>
+            v !== null && Number.isFinite(v)
+        )
     );
 
     const maxData = allValues.length
@@ -404,11 +393,12 @@ window.renderHydrograph = function (item, rows) {
         : undefined;
 
     subtitle.textContent =
-        "Registros válidos: " + totalValid + " · Unidad: m³/s";
+        "Registros válidos: " + totalValid +
+        " · Unidad: m³/s";
 
-    // --------------------------------------------------------
+    // ========================================================
     // 5. GRAFICAR
-    // --------------------------------------------------------
+    // ========================================================
 
     if (!traces.length) {
         chart.innerHTML = "No existen datos disponibles.";
@@ -447,8 +437,8 @@ window.renderHydrograph = function (item, rows) {
                 ...(esEstacion ? { range: [0, maxY] } : {})
             },
 
-            shapes,
-            annotations,
+            shapes: shapes,
+            annotations: annotations,
 
             hovermode: "x unified",
 
@@ -495,3 +485,4 @@ window.parseDate = function (value) {
 
     return Number.isNaN(date.getTime()) ? null : date;
 };
+
