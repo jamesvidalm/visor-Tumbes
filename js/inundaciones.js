@@ -5,7 +5,9 @@
    - Seis horizontes: +12, +24, +36, +48, +60 y +72 horas.
    - Seleccion automatica de PNG segun caudal pronosticado.
    - Imagenes georreferenciadas mediante manifest.json.
-   - Mapa base: GOOGLE SATELLITE.
+   - Fondo predeterminado: GOOGLE SATELLITE.
+   - Alternativa: GOOGLE MAPS (calles).
+   - Selector de fondo en cada mapa.
    - Seis mapas en una sola fila horizontal.
    ============================================================ */
 
@@ -72,7 +74,6 @@ window.loadFloodManifest = async function () {
 
 function getFloodForecastColumn(item) {
 
-    // Estaciones: Q_TIGRE_P o Q_CABOINGA_P
     if (Array.isArray(item.columnas)) {
 
         const forecastColumn = item.columnas.find(
@@ -84,7 +85,6 @@ function getFloodForecastColumn(item) {
         }
     }
 
-    // Quebradas: QD_CABUYAL, QD_HIGUERON, etc.
     if (item.columna) {
         return item.columna;
     }
@@ -115,18 +115,6 @@ function getFloodNumber(value) {
 
 /* ============================================================
    5. SELECCIONAR PNG SEGUN EL CAUDAL
-
-   Ejemplos:
-   Q = 20  -> Q25
-   Q = 30  -> Q25
-   Q = 170 -> Q150
-   Q = 230 -> Q225
-   Q = 430 -> Q400
-   Q = 470 -> Q450
-   Q = 580 -> Q550
-
-   Si no existe el umbral calculado, se usa el umbral
-   disponible inmediatamente inferior.
    ============================================================ */
 
 function getFloodImage(caudal, images) {
@@ -160,13 +148,9 @@ function getFloodImage(caudal, images) {
     let target;
 
     if (caudal <= minimum) {
-
         target = minimum;
-
     } else {
-
         target = Math.floor(caudal / 25) * 25;
-
     }
 
     let selected = available
@@ -223,7 +207,6 @@ function getFloodFlowAtHour(rows, column, targetDate) {
 
     });
 
-    // Tolerancia de 30 minutos.
     if (
         !bestRow ||
         minDifference > 30 * 60 * 1000
@@ -236,7 +219,7 @@ function getFloodFlowAtHour(rows, column, targetDate) {
 
 
 /* ============================================================
-   8. CREAR PANEL DE MAPAS DE INUNDACION
+   8. CREAR PANEL DE MAPAS
    ============================================================ */
 
 function createFloodPanel() {
@@ -286,8 +269,6 @@ function createFloodPanel() {
     style.id = "flood-map-styles";
 
     style.textContent = `
-
-        /* LOS SEIS MAPAS EN UNA SOLA FILA */
 
         #flood-grid {
             display: grid;
@@ -346,6 +327,10 @@ function createFloodPanel() {
             border-top: 1px solid #26354b;
         }
 
+        .flood-map .leaflet-control-layers {
+            font-size: 11px;
+        }
+
         @media (max-width: 1100px) {
 
             #flood-grid {
@@ -354,7 +339,6 @@ function createFloodPanel() {
             }
 
         }
-
     `;
 
     document.head.appendChild(style);
@@ -384,7 +368,53 @@ function clearFloodMaps() {
 
 
 /* ============================================================
-   10. MOSTRAR LOS SEIS MAPAS
+   10. CREAR FONDOS GOOGLE Y SELECTOR
+   ============================================================ */
+
+function addFloodBaseLayers(map, bounds) {
+
+    // GOOGLE SATELLITE: fondo predeterminado.
+    const googleSatellite = L.tileLayer(
+        "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        {
+            maxZoom: 20,
+            attribution: "© Google"
+        }
+    );
+
+    // GOOGLE MAPS: calles, nombres y carreteras.
+    const googleMaps = L.tileLayer(
+        "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        {
+            maxZoom: 20,
+            attribution: "© Google"
+        }
+    );
+
+    // Satellite se carga por defecto.
+    googleSatellite.addTo(map);
+
+    // Selector de mapas base.
+    const baseMaps = {
+        "Google Satellite": googleSatellite,
+        "Google Maps": googleMaps
+    };
+
+    L.control.layers(
+        baseMaps,
+        null,
+        {
+            collapsed: true,
+            position: "topright"
+        }
+    ).addTo(map);
+
+    map.fitBounds(bounds);
+}
+
+
+/* ============================================================
+   11. MOSTRAR LOS SEIS MAPAS
    ============================================================ */
 
 window.renderFloodImages = async function (item, rows) {
@@ -416,7 +446,6 @@ window.renderFloodImages = async function (item, rows) {
             return;
         }
 
-        // Cargar manifest.
         const data = await window.loadFloodManifest();
 
         const startDate = getFloodStartDate();
@@ -434,14 +463,12 @@ window.renderFloodImages = async function (item, rows) {
                 hour12: false
             });
 
-        // Crear seis paneles.
         FLOOD_HORIZONS.forEach(hour => {
 
             const targetDate = new Date(
                 startDate.getTime() + hour * 3600000
             );
 
-            // Caudal pronosticado en cada horizonte.
             const caudal = getFloodFlowAtHour(
                 rows,
                 column,
@@ -449,15 +476,12 @@ window.renderFloodImages = async function (item, rows) {
             );
 
             const card = document.createElement("article");
-
             card.className = "flood-card";
 
             const header = document.createElement("div");
-
             header.className = "flood-card-header";
 
             const heading = document.createElement("strong");
-
             heading.textContent = "+" + hour + " horas";
 
             const value = document.createElement("span");
@@ -471,7 +495,6 @@ window.renderFloodImages = async function (item, rows) {
             header.appendChild(value);
 
             const mapDiv = document.createElement("div");
-
             mapDiv.className = "flood-map";
             mapDiv.id = "flood-map-" + hour;
 
@@ -490,7 +513,6 @@ window.renderFloodImages = async function (item, rows) {
                 return;
             }
 
-            // Seleccionar imagen PNG según el caudal.
             const selected = getFloodImage(
                 caudal,
                 data.images
@@ -529,34 +551,25 @@ window.renderFloodImages = async function (item, rows) {
                 return;
             }
 
-            // Crear mapa Leaflet.
+            // Crear mapa.
             const map = L.map(mapDiv, {
                 zoomControl: true,
                 attributionControl: true,
                 scrollWheelZoom: false
             });
 
-            // =================================================
-            // GOOGLE SATELLITE
-            // =================================================
-
-            L.tileLayer(
-                "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-                {
-                    maxZoom: 20,
-                    attribution: "© Google"
-                }
-            ).addTo(map);
-
-            // =================================================
-            // IMAGEN PNG GEOREFERENCIADA
-            // =================================================
-
+            // Límites geográficos.
             const bounds = L.latLngBounds(
                 selected.bounds[0],
                 selected.bounds[1]
             );
 
+            // Agregar fondos y selector.
+            // Google Satellite queda seleccionado por defecto.
+            addFloodBaseLayers(map, bounds);
+
+            // Superponer la mancha de inundación PNG.
+            // Esta capa permanece visible al cambiar el fondo.
             L.imageOverlay(
                 FLOOD_FOLDER + selected.image,
                 bounds,
@@ -566,13 +579,9 @@ window.renderFloodImages = async function (item, rows) {
                 }
             ).addTo(map);
 
-            map.fitBounds(bounds);
-
             window.FLOOD_MAPS.push(map);
 
-            // Información del PNG utilizado.
             const mapInfo = document.createElement("div");
-
             mapInfo.className = "flood-map-info";
 
             mapInfo.textContent =
@@ -586,7 +595,7 @@ window.renderFloodImages = async function (item, rows) {
 
         });
 
-        // Ajustar mapas después de renderizar.
+        // Actualizar dimensiones.
         setTimeout(() => {
 
             window.FLOOD_MAPS.forEach(map => {
