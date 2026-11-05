@@ -3,12 +3,14 @@
    MAPAS DE INUNDACION - CUENCA DEL RIO TUMBES
 
    - Seis horizontes: +12, +24, +36, +48, +60 y +72 horas.
-   - Selecciona el PNG segun el caudal pronosticado de cada hora.
-   - Utiliza manifest.json y sus limites geograficos.
-   - Compatible con estaciones y quebradas.
+   - Seleccion automatica de PNG segun caudal pronosticado.
+   - Imagenes georreferenciadas mediante manifest.json.
+   - Mapa base: GOOGLE SATELLITE.
+   - Seis mapas en una sola fila horizontal.
    ============================================================ */
 
 window.FLOOD_MANIFEST = null;
+window.FLOOD_MAPS = window.FLOOD_MAPS || [];
 
 const FLOOD_FOLDER = "data/inundaciones/";
 const FLOOD_HORIZONS = [12, 24, 36, 48, 60, 72];
@@ -115,15 +117,15 @@ function getFloodNumber(value) {
    5. SELECCIONAR PNG SEGUN EL CAUDAL
 
    Ejemplos:
-   Q = 20  -> q25.png
-   Q = 30  -> q25.png
-   Q = 170 -> q150.png
-   Q = 230 -> q225.png
-   Q = 430 -> q400.png
-   Q = 470 -> q450.png
-   Q = 580 -> q550.png
+   Q = 20  -> Q25
+   Q = 30  -> Q25
+   Q = 170 -> Q150
+   Q = 230 -> Q225
+   Q = 430 -> Q400
+   Q = 470 -> Q450
+   Q = 580 -> Q550
 
-   Si no existe el umbral calculado, utiliza el umbral
+   Si no existe el umbral calculado, se usa el umbral
    disponible inmediatamente inferior.
    ============================================================ */
 
@@ -153,8 +155,6 @@ function getFloodImage(caudal, images) {
         return null;
     }
 
-    // El primer mapa disponible se utiliza para caudales
-    // inferiores a su umbral.
     const minimum = available[0].threshold;
 
     let target;
@@ -165,19 +165,14 @@ function getFloodImage(caudal, images) {
 
     } else {
 
-        // Intervalos de 25 m3/s.
         target = Math.floor(caudal / 25) * 25;
 
     }
 
-    // Buscar el mayor umbral disponible menor o igual
-    // al umbral calculado.
     let selected = available
         .filter(image => image.threshold <= target)
         .pop();
 
-    // Si el caudal supera el máximo disponible,
-    // utilizar el mapa de mayor umbral.
     if (!selected) {
         selected = available[0];
     }
@@ -222,10 +217,8 @@ function getFloodFlowAtHour(rows, column, targetDate) {
         );
 
         if (difference < minDifference) {
-
             minDifference = difference;
             bestRow = row;
-
         }
 
     });
@@ -276,7 +269,7 @@ function createFloodPanel() {
                 </h3>
             </div>
 
-            <span class="unit">HORIZONTE · HORAS</span>
+            <span class="unit">HORIZONTES · HORAS</span>
         </div>
 
         <div id="scenario-label" class="subinfo">
@@ -294,11 +287,15 @@ function createFloodPanel() {
 
     style.textContent = `
 
+        /* LOS SEIS MAPAS EN UNA SOLA FILA */
+
         #flood-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 10px;
             margin-top: 16px;
+            width: 100%;
+            overflow-x: auto;
         }
 
         .flood-card {
@@ -310,28 +307,28 @@ function createFloodPanel() {
         }
 
         .flood-card-header {
-            padding: 12px 14px;
+            padding: 10px 8px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 5px;
             border-bottom: 1px solid #26354b;
         }
 
         .flood-card-header strong {
             color: #e5edf7;
-            font-size: 13px;
+            font-size: 12px;
         }
 
         .flood-card-header span {
             color: #fbbf24;
-            font-size: 12px;
-            text-align: right;
+            font-size: 11px;
         }
 
         .flood-map {
             width: 100%;
-            height: 350px;
+            height: 280px;
             background: #dce5eb;
         }
 
@@ -342,17 +339,22 @@ function createFloodPanel() {
             font-size: 13px;
         }
 
-        @media (max-width: 700px) {
+        .flood-map-info {
+            padding: 8px;
+            font-size: 11px;
+            color: #a9bad0;
+            border-top: 1px solid #26354b;
+        }
+
+        @media (max-width: 1100px) {
 
             #flood-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .flood-map {
-                height: 300px;
+                overflow-x: auto;
+                grid-template-columns: repeat(6, 220px);
             }
 
         }
+
     `;
 
     document.head.appendChild(style);
@@ -364,8 +366,6 @@ function createFloodPanel() {
 /* ============================================================
    9. LIMPIAR MAPAS ANTERIORES
    ============================================================ */
-
-window.FLOOD_MAPS = window.FLOOD_MAPS || [];
 
 function clearFloodMaps() {
 
@@ -385,9 +385,6 @@ function clearFloodMaps() {
 
 /* ============================================================
    10. MOSTRAR LOS SEIS MAPAS
-
-   Esta funcion conserva el nombre que utilizaba
-   tu aplicacion: renderFloodImages(item, rows).
    ============================================================ */
 
 window.renderFloodImages = async function (item, rows) {
@@ -396,7 +393,6 @@ window.renderFloodImages = async function (item, rows) {
 
         rows = Array.isArray(rows) ? rows : [];
 
-        // Crear panel debajo del hidrograma.
         createFloodPanel();
 
         const grid = document.getElementById("flood-grid");
@@ -438,14 +434,14 @@ window.renderFloodImages = async function (item, rows) {
                 hour12: false
             });
 
-        // Crear los seis paneles.
+        // Crear seis paneles.
         FLOOD_HORIZONS.forEach(hour => {
 
             const targetDate = new Date(
                 startDate.getTime() + hour * 3600000
             );
 
-            // Caudal pronosticado para el horizonte.
+            // Caudal pronosticado en cada horizonte.
             const caudal = getFloodFlowAtHour(
                 rows,
                 column,
@@ -484,7 +480,6 @@ window.renderFloodImages = async function (item, rows) {
 
             grid.appendChild(card);
 
-            // Si no hay caudal para ese horizonte.
             if (caudal === null) {
 
                 mapDiv.innerHTML =
@@ -495,7 +490,7 @@ window.renderFloodImages = async function (item, rows) {
                 return;
             }
 
-            // Seleccionar PNG según el caudal.
+            // Seleccionar imagen PNG según el caudal.
             const selected = getFloodImage(
                 caudal,
                 data.images
@@ -524,7 +519,6 @@ window.renderFloodImages = async function (item, rows) {
                 return;
             }
 
-            // Comprobar Leaflet.
             if (typeof L === "undefined") {
 
                 mapDiv.innerHTML =
@@ -535,28 +529,34 @@ window.renderFloodImages = async function (item, rows) {
                 return;
             }
 
-            // Crear mapa.
+            // Crear mapa Leaflet.
             const map = L.map(mapDiv, {
                 zoomControl: true,
-                attributionControl: false,
+                attributionControl: true,
                 scrollWheelZoom: false
             });
 
-            // Límites: [[sur, oeste], [norte, este]]
+            // =================================================
+            // GOOGLE SATELLITE
+            // =================================================
+
+            L.tileLayer(
+                "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+                {
+                    maxZoom: 20,
+                    attribution: "© Google"
+                }
+            ).addTo(map);
+
+            // =================================================
+            // IMAGEN PNG GEOREFERENCIADA
+            // =================================================
+
             const bounds = L.latLngBounds(
                 selected.bounds[0],
                 selected.bounds[1]
             );
 
-            // Mapa base.
-            L.tileLayer(
-                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                {
-                    maxZoom: 19
-                }
-            ).addTo(map);
-
-            // Superponer imagen de inundación.
             L.imageOverlay(
                 FLOOD_FOLDER + selected.image,
                 bounds,
@@ -570,34 +570,30 @@ window.renderFloodImages = async function (item, rows) {
 
             window.FLOOD_MAPS.push(map);
 
-            // Mostrar el umbral del PNG seleccionado.
-            const thresholdLabel = document.createElement("div");
+            // Información del PNG utilizado.
+            const mapInfo = document.createElement("div");
 
-            thresholdLabel.style.cssText =
-                "padding:8px 12px;" +
-                "font-size:12px;" +
-                "color:#a9bad0;" +
-                "border-top:1px solid #26354b;";
+            mapInfo.className = "flood-map-info";
 
-            thresholdLabel.textContent =
-                "Imagen utilizada: " +
+            mapInfo.textContent =
+                "Imagen: " +
                 selected.id.toUpperCase() +
-                " · Umbral de referencia: " +
+                " · Umbral: " +
                 selected.threshold +
                 " m³/s";
 
-            card.appendChild(thresholdLabel);
+            card.appendChild(mapInfo);
 
         });
 
-        // Ajustar dimensiones después de mostrar los mapas.
+        // Ajustar mapas después de renderizar.
         setTimeout(() => {
 
             window.FLOOD_MAPS.forEach(map => {
                 map.invalidateSize();
             });
 
-        }, 200);
+        }, 300);
 
     } catch (error) {
 
