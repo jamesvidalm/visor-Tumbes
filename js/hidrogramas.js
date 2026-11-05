@@ -61,7 +61,7 @@ window.renderHydrograph = function (item, rows) {
 
     // Hora local de Peru: UTC-5
     const inicioPronostico = new Date(
-        "2026-11-05T02:00:00-05:00"
+        "2026-11-05T08:00:00-05:00"
     );
 
     const horasAntes = 48;
