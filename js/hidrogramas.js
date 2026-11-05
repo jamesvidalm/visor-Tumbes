@@ -1,183 +1,188 @@
+// ============================================================
+// HIDROGRAMAS - VISOR DE CAUDALES TUMBES
+// ============================================================
 
-window.renderHydrograph = function(item, rows) {
+window.renderHydrograph = function (item, rows) {
+
+    // --------------------------------------------------------
+    // 1. ASEGURAR QUE EXISTAN LOS ELEMENTOS DEL HIDROGRAMA
+    // --------------------------------------------------------
+
+    let panel = document.querySelector(".hydro-panel");
+
+    if (!panel) {
+        panel = document.createElement("section");
+        panel.className = "panel hydro-panel";
+        document.querySelector("main")?.appendChild(panel);
+    }
+
+    let title = document.getElementById("hydro-title");
+
+    if (!title) {
+        title = document.createElement("h3");
+        title.id = "hydro-title";
+        panel.appendChild(title);
+    }
+
+    let info = document.getElementById("selection-info");
+
+    if (!info) {
+        info = document.createElement("div");
+        info.id = "selection-info";
+        panel.appendChild(info);
+    }
+
+    let chart = document.getElementById("hydro-chart");
+
+    if (!chart) {
+        chart = document.createElement("div");
+        chart.id = "hydro-chart";
+        chart.style.width = "100%";
+        chart.style.minHeight = "400px";
+        panel.appendChild(chart);
+    }
+
+    // --------------------------------------------------------
+    // 2. IDENTIFICAR SERIES
+    // --------------------------------------------------------
+
+    rows = Array.isArray(rows) ? rows : [];
 
     const columns = item.columnas || [item.columna];
-
     const labels = item.etiquetas || columns;
+
+    title.textContent = item.nombre || "Hidrograma";
+
+    // --------------------------------------------------------
+    // 3. CONSTRUIR SERIES SIN ELIMINAR LOS VALORES FALTANTES
+    // --------------------------------------------------------
 
     const traces = [];
 
-    let total = 0;
-
     columns.forEach((column, i) => {
 
-        // Conservar todos los tiempos y respetar los valores faltantes.
-        const dates = rows.map(r => parseDate(r.fecha));
-
         const values = rows.map(r => {
-
             const value = r[column];
 
             if (
                 value === null ||
                 value === undefined ||
-                String(value).trim() === ""
+                value === "" ||
+                !Number.isFinite(Number(value))
             ) {
                 return null;
             }
 
-            const number = Number(value);
-
-            return Number.isFinite(number) ? number : null;
-
+            return Number(value);
         });
 
-        const validCount = values.filter(
-            value => value !== null
-        ).length;
+        // No dibujar una serie que no tenga ningún dato válido
+        const validCount = values.filter(v => v !== null).length;
 
-        // Si no existen datos, no dibujar la serie.
-        if (validCount === 0) {
-            console.log("Sin datos disponibles:", column);
-            return;
-        }
+        if (validCount === 0) return;
 
-        total += validCount;
-
-        const isCaboIngaReal = (
-            item.nombre === "Cabo Inga" &&
-            column === "Q_CABOINGA"
-        );
-
-        const isObserved = (
-            column === "Q_TIGRE" ||
-            column === "Q_CABOINGA"
-        );
+        const label = labels[i] || column;
+        const name = String(item.nombre || "").toLowerCase();
 
         let mode = "lines";
-        let lineStyle = {};
+        let line = {
+            width: 2.5,
+            color: ["#42c8e8", "#f59e0b", "#a78bfa"][i % 3]
+        };
+        let marker = undefined;
 
-        // Cabo Inga: caudales reales representados solamente como puntos.
-        if (isCaboIngaReal) {
-
+        // Cabo Inga observado: puntos aislados, sin línea
+        if (
+            name.includes("cabo inga") &&
+            column === "Q_CABOINGA"
+        ) {
             mode = "markers";
-
+            marker = {
+                size: 6,
+                color: "#42c8e8"
+            };
         }
 
-        // Caudal real de El Tigre: línea continua solo entre datos disponibles.
-        if (column === "Q_TIGRE") {
-
+        // El Tigre observado: línea continua solo entre
+        // observaciones consecutivas, respetando los vacíos
+        if (
+            name.includes("el tigre") &&
+            column === "Q_TIGRE"
+        ) {
             mode = "lines";
-
-            lineStyle = {
+            line = {
                 color: "#42c8e8",
                 width: 2.5
             };
-
         }
 
-        // Caudales pronosticados: líneas diferenciadas.
+        // Pronóstico: línea discontinua
         if (
-            column === "Q_TIGRE_P" ||
-            column === "Q_CABOINGA_P"
+            column.includes("_P") ||
+            label.toLowerCase().includes("pronostic")
         ) {
-
             mode = "lines";
-
-            lineStyle = {
+            line = {
                 color: "#f59e0b",
                 width: 2.5,
                 dash: "dash"
             };
-
         }
 
-        // Datos reales puntuales de Cabo Inga.
-        if (isCaboIngaReal) {
-
-            traces.push({
-
-                x: dates,
-                y: values,
-
-                type: "scatter",
-                mode: "markers",
-
-                name: labels[i] || column,
-
-                connectgaps: false,
-
-                marker: {
-                    color: "#42c8e8",
-                    size: 7,
-                    symbol: "circle"
-                },
-
-                hovertemplate:
-                    "%{x|%d/%m/%Y %H:%M}" +
-                    "<br>Q: %{y:.3f} m³/s" +
-                    "<extra>" + (labels[i] || column) + "</extra>"
-
-            });
-
-            return;
-        }
-
-        // Resto de series.
-        traces.push({
-
-            x: dates,
+        const trace = {
+            x: rows.map(r => window.parseDate(r.fecha)),
             y: values,
-
             type: "scatter",
             mode: mode,
-
-            name: labels[i] || column,
-
+            name: label,
             connectgaps: false,
-
-            line: lineStyle,
-
-            marker: {
-                size: 5,
-                color: isObserved ? "#42c8e8" : "#f59e0b"
-            },
-
+            line: line,
             hovertemplate:
                 "%{x|%d/%m/%Y %H:%M}" +
                 "<br>Q: %{y:.3f} m³/s" +
-                "<extra>" + (labels[i] || column) + "</extra>"
+                "<extra>" + label + "</extra>"
+        };
 
-        });
+        if (marker) trace.marker = marker;
 
+        traces.push(trace);
     });
 
+    // --------------------------------------------------------
+    // 4. INFORMACIÓN
+    // --------------------------------------------------------
 
-    document.getElementById("hydro-title").textContent =
-        item.nombre;
+    const total = traces.reduce((n, t) => {
+        return n + t.y.filter(v => v !== null).length;
+    }, 0);
 
-    document.getElementById("selection-info").textContent =
-        "Registros disponibles: " + total + " · Unidad: m³/s";
+    info.textContent =
+        "Variables: " +
+        columns.join(" / ") +
+        " · Registros válidos: " +
+        total +
+        " · Unidad: m³/s";
 
+    // --------------------------------------------------------
+    // 5. MOSTRAR GRÁFICO
+    // --------------------------------------------------------
 
-    // Si ninguna serie tiene datos, mostrar mensaje.
     if (traces.length === 0) {
 
-        document.getElementById("hydro-chart").innerHTML =
+        chart.innerHTML =
             '<div class="empty-state">' +
-            'No existen datos de caudal disponibles para esta ubicación.' +
+            'No existen datos válidos para esta ubicación.' +
             '</div>';
 
         return;
-
     }
 
+    chart.innerHTML = "";
 
     Plotly.newPlot(
-        "hydro-chart",
+        chart,
         traces,
         {
-
             paper_bgcolor: "rgba(0,0,0,0)",
             plot_bgcolor: "rgba(0,0,0,0)",
 
@@ -190,7 +195,7 @@ window.renderHydrograph = function(item, rows) {
                 l: 65,
                 r: 25,
                 t: 35,
-                b: 55
+                b: 60
             },
 
             xaxis: {
@@ -211,25 +216,22 @@ window.renderHydrograph = function(item, rows) {
                 orientation: "h",
                 y: 1.12
             }
-
         },
-
         {
             responsive: true,
             displaylogo: false
         }
-
     );
-
 };
 
 
-// Convertir fechas de Excel.
-window.parseDate = function(v) {
+// ============================================================
+// CONVERSIÓN DE FECHAS
+// ============================================================
 
-    if (v instanceof Date) {
-        return v;
-    }
+window.parseDate = function (v) {
+
+    if (v instanceof Date) return v;
 
     if (typeof v === "number") {
 
@@ -245,13 +247,10 @@ window.parseDate = function(v) {
                 Math.floor(d.S)
             ))
             : null;
-
     }
 
     const s = String(v).trim().replace(" ", "T");
-
     const d = new Date(s);
 
-    return isNaN(d) ? null : d;
-
+    return isNaN(d.getTime()) ? null : d;
 };
