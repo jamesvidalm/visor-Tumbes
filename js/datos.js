@@ -1,28 +1,42 @@
-// Configuración de nombres: ajusta aquí si los nombres de tus Excel/GeoJSON son distintos.
+// Configuración de archivos y columnas reales del proyecto Tumbes.
 window.CONFIG = {
-  caudalesFile: "data/caudales.xlsx",
-  ubicacionesFile: "data/ubicacion.xlsx",
-  caudalesSheet: null,       // null = primera hoja
-  ubicacionesSheet: null,    // null = primera hoja
-  // Columna de caudal asociada a cada punto del mapa:
+  caudalesFile: "data/caudales/caudales_Tumbes.xlsx",
+  ubicacionesFile: "data/ubicacion/ubicacion.xlsx",
+  caudalesSheet: "Hoja1",
+  ubicacionesSheet: "Ubicacion",
+
+  // Dos marcadores físicos. Cada marcador muestra dos series en su hidrograma.
   estaciones: [
-    {nombre:"TIGRE", columna:"Q_TIGRE"},
-    {nombre:"TIGRE_P", columna:"Q_TIGRE_P"},
-    {nombre:"CABOINGA", columna:"Q_CABOINGA"}
+    {
+      nombre: "El Tigre",
+      columna: "Q_TIGRE_P", // se usa para seleccionar el escenario de inundación
+      columnas: ["Q_TIGRE", "Q_TIGRE_P"],
+      etiquetas: ["Caudal real", "Caudal pronosticado"]
+    },
+    {
+      nombre: "Cabo Inga",
+      columna: "Q_CABOINGA_P",
+      columnas: ["Q_CABOINGA", "Q_CABOINGA_P"],
+      etiquetas: ["Caudal real", "Caudal pronosticado"]
+    }
   ],
-  // Nombre del archivo GeoJSON y columna de caudal que se graficará al hacer clic:
+
   quebradas: [
-    {nombre:"HIGUERON", archivo:"QD_HIGUERON.geojson", columna:"Q_HIGUERON"},
-    {nombre:"CABUYAL", archivo:"QD_CABUYAL.geojson", columna:"Q_CABUYAL"},
-    {nombre:"VAQUERIA", archivo:"QD_VAQUERIA.geojson", columna:"Q_VAQUERIA"},
-    {nombre:"CEIBAL", archivo:"QD_CEIBAL.geojson", columna:"Q_CEIBAL"},
-    {nombre:"ELTIGRE", archivo:"QD_ELTIGRE.geojson", columna:"Q_ELTIGRE"},
-    {nombre:"JARDINA", archivo:"QD_JARDINA.geojson", columna:"Q_JARDINA"},
-    {nombre:"CABEZADETORO", archivo:"QD_CABEZADETORO.geojson", columna:"Q_CABEZADETORO"},
-    {nombre:"CORRALES", archivo:"QD_CORRALES.geojson", columna:"Q_CORRALES"}
+    {nombre:"Cabuyal", archivo:"cabuyal.geojson", columna:"QD_CABUYAL"},
+    {nombre:"Vaquería", archivo:"vaqueria.geojson", columna:"QD_VAQUERIA"},
+    {nombre:"El Tigre", archivo:"ElTigreQ.geojson", columna:"QD_ELTIGRE"},
+    {nombre:"Cabeza de Toro", archivo:"cabezaDeToro.geojson", columna:"QD_CABEZADETORO"},
+    {nombre:"Jardina", archivo:"jardina.geojson", columna:"QD_JARDINA"},
+    {nombre:"Higuerón", archivo:"higueron.geojson", columna:"QD_HIGUERON"},
+    {nombre:"Corrales", archivo:"corrales.geojson", columna:"QD_CORRALES"},
+    {nombre:"Ceibal", archivo:"ceibal.geojson", columna:"QD_CEIBAL"}
   ],
-  carpetaQuebradas:"data/quebradas/",
-  manifestInundaciones:"data/inundaciones/manifest.json",
-  // Nombres de campos aceptados en ubicacion.xlsx:
-  camposUbicacion:{nombre:["punto","nombre","estacion","codigo"],lat:["lat","latitud"],lon:["lon","long","longitud"]}
+
+  carpetaQuebradas: "data/quebradas/",
+  manifestInundaciones: "data/inundaciones/manifest.json",
+  camposUbicacion: {
+    nombre:["ID","punto","nombre","estacion","codigo"],
+    lat:["Lat","lat","latitud"],
+    lon:["Long","lon","long","longitud"]
+  }
 };
