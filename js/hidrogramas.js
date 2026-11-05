@@ -1,6 +1,6 @@
 // ============================================================
 // HIDROGRAMAS - CUENCA DEL RIO TUMBES
-// Compatible con los elementos existentes de index.html
+// Umbrales para El Tigre y Cabo Inga
 // ============================================================
 
 window.renderHydrograph = function (item, rows) {
@@ -9,9 +9,8 @@ window.renderHydrograph = function (item, rows) {
     const subtitle = document.getElementById("hydro-subtitle");
     const chart = document.getElementById("hydro-chart");
 
-    // Verificar elementos HTML
     if (!title || !subtitle || !chart) {
-        console.error("No se encontraron hydro-title, hydro-subtitle o hydro-chart en index.html");
+        console.error("No se encontraron los elementos del hidrograma en index.html");
         return;
     }
 
@@ -28,15 +27,21 @@ window.renderHydrograph = function (item, rows) {
         return;
     }
 
-    // Fechas
+    // --------------------------------------------------------
+    // FECHAS
+    // --------------------------------------------------------
+
     const dates = rows.map(r => window.parseDate(r.fecha));
 
     const traces = [];
     let totalValid = 0;
 
+    // --------------------------------------------------------
+    // SERIES DE CAUDAL
+    // --------------------------------------------------------
+
     columns.forEach((column, i) => {
 
-        // Mantener los valores faltantes como null
         const values = rows.map(r => {
             const value = r[column];
 
@@ -49,39 +54,29 @@ window.renderHydrograph = function (item, rows) {
             }
 
             const number = Number(value);
-
             return Number.isFinite(number) ? number : null;
         });
 
         const validCount = values.filter(v => v !== null).length;
 
-        // No dibujar series sin datos
-        if (validCount === 0) {
-            console.log("Sin datos para:", column);
-            return;
-        }
+        if (validCount === 0) return;
 
         totalValid += validCount;
 
         const label = labels[i] || column;
 
-        // Configuración visual
         let mode = "lines";
-        let line = {
-            color: "#42c8e8",
-            width: 2.5
-        };
-
-        let marker = {
-            color: "#42c8e8",
-            size: 5
-        };
+        let color = "#42c8e8";
+        let width = 2.5;
+        let dash = "solid";
+        let marker = { color: color, size: 5 };
 
         // Cabo Inga observado: puntos aislados
         if (column === "Q_CABOINGA") {
             mode = "markers";
+            color = "#42c8e8";
             marker = {
-                color: "#42c8e8",
+                color: color,
                 size: 7,
                 symbol: "circle"
             };
@@ -90,36 +85,30 @@ window.renderHydrograph = function (item, rows) {
         // El Tigre observado: línea con interrupciones
         if (column === "Q_TIGRE") {
             mode = "lines";
-            line = {
-                color: "#42c8e8",
-                width: 2.5
-            };
+            color = "#42c8e8";
+            width = 2.5;
         }
 
-        // Pronósticos: líneas discontinuas
+        // Pronóstico: línea continua
         if (
             column === "Q_TIGRE_P" ||
             column === "Q_CABOINGA_P"
         ) {
             mode = "lines";
-            line = {
-                color: "#f59e0b",
-                width: 2.5,
-                dash: "dash"
-            };
+            color = "#f59e0b";
+            width = 2.5;
+            dash = "solid";
             marker = {
-                color: "#f59e0b",
+                color: color,
                 size: 4
             };
         }
 
-        // Quebradas: líneas
+        // Series de quebradas
         if (column.startsWith("QD_")) {
             mode = "lines";
-            line = {
-                color: "#42c8e8",
-                width: 2.5
-            };
+            color = "#42c8e8";
+            width = 2.5;
         }
 
         traces.push({
@@ -129,7 +118,11 @@ window.renderHydrograph = function (item, rows) {
             mode: mode,
             name: label,
             connectgaps: false,
-            line: line,
+            line: {
+                color: color,
+                width: width,
+                dash: dash
+            },
             marker: marker,
             hovertemplate:
                 "%{x|%d/%m/%Y %H:%M}" +
@@ -139,19 +132,103 @@ window.renderHydrograph = function (item, rows) {
     });
 
     subtitle.textContent =
-        "Registros válidos: " + totalValid +
-        " · Unidad: m³/s";
+        "Registros válidos: " + totalValid + " · Unidad: m³/s";
 
-    // Ninguna serie disponible
     if (traces.length === 0) {
-        chart.innerHTML =
-            '<div class="empty">' +
-            'No existen datos de caudal disponibles para esta ubicación.' +
-            '</div>';
+        chart.innerHTML = "No existen datos de caudal disponibles.";
         return;
     }
 
-    // Dibujar hidrograma
+    // --------------------------------------------------------
+    // UMBRALES: SOLO EL TIGRE Y CABO INGA
+    // --------------------------------------------------------
+
+    const nombre = String(item.nombre || "").toLowerCase();
+
+    const esEstacion =
+        nombre.includes("el tigre") ||
+        nombre.includes("cabo inga");
+
+    const shapes = [];
+    const annotations = [];
+
+    const umbrales = [
+        {
+            valor: 600,
+            nombre: "Umbral amarillo",
+            color: "#facc15"
+        },
+        {
+            valor: 800,
+            nombre: "Umbral naranja",
+            color: "#f97316"
+        },
+        {
+            valor: 1000,
+            nombre: "Umbral rojo",
+            color: "#ef4444"
+        }
+    ];
+
+    if (esEstacion) {
+
+        umbrales.forEach(u => {
+
+            // Línea horizontal
+            shapes.push({
+                type: "line",
+                xref: "paper",
+                x0: 0,
+                x1: 1,
+                yref: "y",
+                y0: u.valor,
+                y1: u.valor,
+                line: {
+                    color: u.color,
+                    width: 2,
+                    dash: "solid"
+                }
+            });
+
+            // Etiqueta del umbral
+            annotations.push({
+                xref: "paper",
+                x: 1,
+                xanchor: "right",
+                yref: "y",
+                y: u.valor,
+                text: u.nombre + " (" + u.valor + " m³/s)",
+                showarrow: false,
+                font: {
+                    color: u.color,
+                    size: 10
+                },
+                bgcolor: "rgba(10,19,34,0.75)",
+                borderpad: 3
+            });
+        });
+    }
+
+    // --------------------------------------------------------
+    // ESCALA VERTICAL
+    // --------------------------------------------------------
+
+    const allValues = traces.flatMap(t =>
+        t.y.filter(v => v !== null)
+    );
+
+    const maxData = allValues.length
+        ? Math.max(...allValues)
+        : 0;
+
+    const maxY = esEstacion
+        ? Math.max(1100, maxData * 1.05)
+        : undefined;
+
+    // --------------------------------------------------------
+    // GRAFICAR
+    // --------------------------------------------------------
+
     Plotly.newPlot(
         chart,
         traces,
@@ -167,7 +244,7 @@ window.renderHydrograph = function (item, rows) {
             margin: {
                 l: 65,
                 r: 25,
-                t: 35,
+                t: 45,
                 b: 60
             },
 
@@ -180,14 +257,18 @@ window.renderHydrograph = function (item, rows) {
             yaxis: {
                 title: "Caudal (m³/s)",
                 gridcolor: "#26354b",
-                rangemode: "tozero"
+                rangemode: "tozero",
+                ...(esEstacion ? { range: [0, maxY] } : {})
             },
+
+            shapes: shapes,
+            annotations: annotations,
 
             hovermode: "x unified",
 
             legend: {
                 orientation: "h",
-                y: 1.12
+                y: 1.15
             }
         },
         {
