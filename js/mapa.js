@@ -1,13 +1,13 @@
 
 const COLORES_QUEBRADAS = [
-    "#e63946", // Cabuyal
-    "#00b4d8", // Vaquería
-    "#f4a261", // El Tigre
-    "#9b5de5", // Cabeza de Toro
-    "#2a9d8f", // Jardina
-    "#f15bb5", // Higuerón
-    "#fee440", // Corrales
-    "#4361ee"  // Ceibal
+    "#e63946",
+    "#00b4d8",
+    "#f4a261",
+    "#9b5de5",
+    "#2a9d8f",
+    "#f15bb5",
+    "#d4a017",
+    "#4361ee"
 ];
 
 window.initMap = function(points, onSelect) {
@@ -23,7 +23,6 @@ window.initMap = function(points, onSelect) {
 
     const bounds = [];
 
-    // Marcadores de estaciones
     points.forEach(p => {
 
         const marker = L.circleMarker(
@@ -38,52 +37,42 @@ window.initMap = function(points, onSelect) {
         ).addTo(map);
 
         marker.bindTooltip(p.nombre);
-
-        marker.bindPopup(
-            "<b>" + p.nombre + "</b><br>Selecciona para consultar el hidrograma"
-        );
-
         marker.on("click", () => onSelect(p));
 
         bounds.push([p.lat, p.lon]);
+
     });
 
-    if (bounds.length > 0) {
-        map.fitBounds(bounds, {
-            padding: [40, 40]
-        });
+    if (bounds.length) {
+        map.fitBounds(bounds, { padding: [40, 40] });
     }
 
     return map;
 };
 
 
-// Cargar los polígonos y crear leyenda
 window.addPolygons = async function(map, onSelect) {
 
-    const legend = L.control({
-        position: "bottomright"
-    });
+    // Leyenda de quebradas
+    const legend = L.control({ position: "bottomright" });
 
     legend.onAdd = function() {
 
-        const div = L.DomUtil.create("div", "quebradas-legend");
+        const div = L.DomUtil.create("div", "legend-quebradas");
 
-        div.style.background = "rgba(10, 19, 34, 0.94)";
-        div.style.color = "#ffffff";
+        div.style.background = "rgba(10,19,34,0.95)";
+        div.style.color = "white";
         div.style.padding = "12px";
         div.style.borderRadius = "8px";
         div.style.border = "1px solid #40516b";
         div.style.fontSize = "12px";
-        div.style.lineHeight = "22px";
-        div.style.maxHeight = "240px";
-        div.style.overflowY = "auto";
+        div.style.lineHeight = "23px";
 
         const title = document.createElement("div");
-        title.textContent = "QUEBRADAS";
+        title.textContent = "LEYENDA DE QUEBRADAS";
         title.style.fontWeight = "bold";
-        title.style.marginBottom = "6px";
         title.style.color = "#8eb9ed";
+        title.style.marginBottom = "5px";
 
         div.appendChild(title);
 
@@ -94,21 +83,18 @@ window.addPolygons = async function(map, onSelect) {
             item.style.alignItems = "center";
             item.style.gap = "8px";
 
-            const symbol = document.createElement("span");
-            symbol.style.width = "13px";
-            symbol.style.height = "13px";
-            symbol.style.display = "inline-block";
-            symbol.style.background = COLORES_QUEBRADAS[
-                i % COLORES_QUEBRADAS.length
-            ];
-            symbol.style.border = "1px solid white";
-            symbol.style.borderRadius = "3px";
-            symbol.style.flexShrink = "0";
+            const square = document.createElement("span");
+            square.style.width = "13px";
+            square.style.height = "13px";
+            square.style.backgroundColor =
+                COLORES_QUEBRADAS[i % COLORES_QUEBRADAS.length];
+            square.style.border = "1px solid white";
+            square.style.flexShrink = "0";
 
             const name = document.createElement("span");
             name.textContent = q.nombre;
 
-            item.appendChild(symbol);
+            item.appendChild(square);
             item.appendChild(name);
             div.appendChild(item);
 
@@ -122,11 +108,10 @@ window.addPolygons = async function(map, onSelect) {
     legend.addTo(map);
 
 
-    // Dibujar cada quebrada
+    // Cargar polígonos
     for (let i = 0; i < CONFIG.quebradas.length; i++) {
 
         const q = CONFIG.quebradas[i];
-
         const color = COLORES_QUEBRADAS[
             i % COLORES_QUEBRADAS.length
         ];
@@ -134,7 +119,6 @@ window.addPolygons = async function(map, onSelect) {
         try {
 
             const url = CONFIG.carpetaQuebradas + q.archivo;
-
             const response = await fetch(url);
 
             if (!response.ok) {
@@ -159,11 +143,6 @@ window.addPolygons = async function(map, onSelect) {
 
                     layer.bindTooltip(q.nombre);
 
-                    layer.bindPopup(
-                        "<b>" + q.nombre + "</b><br>" +
-                        "Selecciona para consultar su hidrograma"
-                    );
-
                     layer.on("click", () => {
 
                         onSelect({
@@ -184,7 +163,7 @@ window.addPolygons = async function(map, onSelect) {
         } catch (error) {
 
             console.error(
-                "Error cargando " + q.nombre + ":",
+                "Error en quebrada " + q.nombre + ":",
                 error
             );
 
