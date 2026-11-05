@@ -1,51 +1,21 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Cuenca del río Tumbes | Pronóstico hidrológico</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cuenca del río Tumbes | Visor hidrológico</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<header class="topbar">
-  <div class="brand-mark">T</div>
-  <div><div class="eyebrow">SISTEMA DE ALERTA HIDROLÓGICA</div><h1>Cuenca del río Tumbes</h1></div>
-  <div class="top-meta"><span class="live-dot"></span> PRONÓSTICO · 72 HORAS</div>
-</header>
+<header class="topbar"><div class="brand">T</div><div><div class="eyebrow">SISTEMA DE PRONÓSTICO HIDROLÓGICO</div><h1>Cuenca del río Tumbes</h1></div><div class="status"><i></i> PRONÓSTICO HORARIO</div></header>
 <main>
-  <section class="intro">
-    <div><div class="eyebrow">MONITOREO Y PRONÓSTICO</div><h2>Visor hidrológico e inundaciones</h2>
-    <p>Selecciona una estación o una quebrada en el mapa para consultar su pronóstico de caudal y el escenario de inundación correspondiente.</p></div>
-    <div class="updated"><span>DATOS DEL SISTEMA</span><strong id="data-status">Cargando archivos…</strong></div>
-  </section>
-
-  <section class="panel map-panel">
-    <div class="panel-heading"><div><span class="section-kicker">01 / ÁREA DE ESTUDIO</span><h3>Mapa de estaciones y quebradas</h3></div>
-      <div class="legend"><span><i class="dot station"></i> Estaciones</span><span><i class="dot basin"></i> Quebradas</span></div></div>
-    <div id="map"></div>
-    <div class="map-hint">Haz clic en un marcador o polígono para consultar su hidrograma.</div>
-  </section>
-
-  <section class="panel hydro-panel">
-    <div class="panel-heading"><div><span class="section-kicker">02 / PRONÓSTICO DE CAUDALES</span><h3 id="hydro-title">Selecciona un punto o quebrada</h3></div>
-      <div class="unit-pill">CAUDAL · m³/s</div></div>
-    <div id="selection-info" class="selection-info">Todavía no has seleccionado una ubicación.</div>
-    <div id="hydro-chart" class="chart"><div class="empty-state">El hidrograma aparecerá aquí cuando selecciones una ubicación en el mapa.</div></div>
-  </section>
-
-  <section class="panel flood-panel">
-    <div class="panel-heading"><div><span class="section-kicker">03 / MODELACIÓN HIDRÁULICA</span><h3>Manchas de inundación pronosticadas</h3>
-      <p class="subheading">Escenarios cada 12 horas · Hasta 72 horas</p></div>
-      <div class="scenario" id="scenario-label">Selecciona una ubicación</div></div>
-    <div id="flood-grid" class="flood-grid">
-      <div class="empty-state">Las seis imágenes PNG se mostrarán aquí después de seleccionar una ubicación.</div>
-    </div>
-    <p class="footnote">Las imágenes se seleccionan automáticamente usando el escenario de caudal más cercano configurado en inundaciones/manifest.json.</p>
-  </section>
-  <footer>Visor Tumbes · Pronóstico hidrológico · Horario de referencia: Perú (UTC−5)</footer>
+<section class="intro"><div><div class="eyebrow">MONITOREO Y MODELACIÓN</div><h2>Visor de caudales y quebradas</h2><p>Selecciona El Tigre, Cabo Inga o cualquiera de los polígonos de quebradas para consultar su hidrograma.</p></div><div class="info"><small>DATOS CARGADOS</small><strong id="data-status">Cargando…</strong></div></section>
+<section class="panel"><div class="panel-head"><div><small>01 / ÁREA DE ESTUDIO</small><h3>Estaciones y quebradas</h3></div><div class="legend"><span><b class="point"></b>Puntos</span><span><b class="polygon"></b>Quebradas</span></div></div><div id="map"></div><div class="hint">Haz clic en un punto o polígono para consultar el hidrograma.</div></section>
+<section class="panel"><div class="panel-head"><div><small>02 / PRONÓSTICO</small><h3 id="hydro-title">Selecciona una ubicación en el mapa</h3></div><span class="unit">CAUDAL · m³/s</span></div><div id="hydro-subtitle" class="subinfo">Los hidrogramas se mostrarán aquí.</div><div id="hydro-chart"><div class="empty">Selecciona El Tigre, Cabo Inga o una quebrada.</div></div></section>
+<footer>Visor hidrológico de la cuenca del río Tumbes · Datos horarios · Perú (UTC−5)</footer>
 </main>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-<script src="js/datos.js"></script><script src="js/hidrogramas.js"></script><script src="js/inundaciones.js"></script><script src="js/mapa.js"></script><script src="js/app.js"></script>
+<script src="js/config.js"></script><script src="js/hidrogramas.js"></script><script src="js/mapa.js"></script><script src="js/app.js"></script>
 </body></html>
