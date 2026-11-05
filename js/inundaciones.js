@@ -101,44 +101,13 @@ window.loadFloodManifest = async function () {
 
 
 /* ============================================================
-   3. CARGAR INTERVALOS DE PROFUNDIDAD
+   3. INTERVALOS DE PROFUNDIDAD
+
+   Se utilizan los intervalos predeterminados.
+   No se solicita q100.json porque no existe en GitHub.
    ============================================================ */
 
-async function loadFloodBreaks() {
-
-    if (window.FLOOD_BREAKS) {
-        return window.FLOOD_BREAKS;
-    }
-
-    try {
-
-        const response = await fetch(
-            FLOOD_FOLDER + "q100.json"
-        );
-
-        if (!response.ok) {
-            throw new Error("No se pudo leer q100.json");
-        }
-
-        const data = await response.json();
-
-        if (
-            Array.isArray(data.breaks) &&
-            data.breaks.length === 11
-        ) {
-
-            window.FLOOD_BREAKS = data.breaks;
-
-            return window.FLOOD_BREAKS;
-        }
-
-    } catch (error) {
-
-        console.warn(
-            "Se utilizaran los intervalos predeterminados:",
-            error
-        );
-    }
+function loadFloodBreaks() {
 
     window.FLOOD_BREAKS = FLOOD_DEFAULT_BREAKS;
 
@@ -230,6 +199,10 @@ function getFloodStartDate() {
 
 /* ============================================================
    7. BUSCAR CAUDAL DE EL TIGRE EN CADA HORIZONTE
+
+   Se permite una tolerancia de hasta 3 horas.
+   Esto evita perder el mapa +72 h cuando el último registro
+   disponible termina 2 horas antes del objetivo calculado.
    ============================================================ */
 
 function getFloodFlowAtHour(rows, targetDate) {
@@ -256,9 +229,10 @@ function getFloodFlowAtHour(rows, targetDate) {
 
     });
 
+    // Tolerancia máxima: 3 horas.
     if (
         !bestRow ||
-        minDifference > 30 * 60 * 1000
+        minDifference > 3 * 60 * 60 * 1000
     ) {
         return null;
     }
@@ -581,6 +555,7 @@ window.renderFloodImages = async function (item, rows) {
         const grid = document.getElementById("flood-grid");
         const label = document.getElementById("scenario-label");
         const title = document.getElementById("flood-title");
+
         const legendContainer = document.getElementById(
             "flood-legend-container"
         );
@@ -593,8 +568,8 @@ window.renderFloodImages = async function (item, rows) {
         title.textContent =
             "Escenarios de inundación - Estación El Tigre";
 
-        // CARGAR INTERVALOS DE PROFUNDIDAD
-        const breaks = await loadFloodBreaks();
+        // INTERVALOS DE PROFUNDIDAD PREDETERMINADOS
+        const breaks = loadFloodBreaks();
 
         // COMPROBAR PRONOSTICO DE EL TIGRE
         if (!rows.some(row =>
