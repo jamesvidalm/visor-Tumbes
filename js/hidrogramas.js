@@ -1,23 +1,20 @@
 
  // ============================================================
- // VISOR HIDROLOGICO - CUENCA DEL RIO TUMBES
+ // HIDROGRAMAS - CUENCA DEL RIO TUMBES
  //
- // EL TIGRE:
- //   Q_TIGRE       = Observado
- //   Q_TIGRE_P     = Pronosticado
+ // INICIO FIJO DEL PRONOSTICO:
+ // 05 NOVIEMBRE 2026 - 02:00 HORA PERU (UTC-5)
  //
- // CABO INGA:
- //   Q_CABOINGA    = Observado (puntos unidos con spline)
- //   Q_CABOINGA_P  = Pronosticado
+ // ESTACIONES:
+ // - Observado: desde 48 horas antes y hasta donde exista dato.
+ // - Pronosticado: desde la hora de inicio hasta +72 horas.
  //
  // QUEBRADAS:
- //   QD_*          = Pronosticado
+ // - Solo caudal pronosticado desde el inicio hasta +72 horas.
  //
- // PRONOSTICO:
- //   Banda de incertidumbre +/- 20 %
- //
- // UMBRALES:
- //   Amarillo 600 | Naranja 800 | Rojo 1000 m3/s
+ // - Banda de incertidumbre +/- 20 %
+ // - Linea vertical de inicio de pronostico
+ // - Umbrales de estaciones: 600, 800 y 1000 m3/s
  // ============================================================
 
 window.renderHydrograph = function (item, rows) {
@@ -39,8 +36,7 @@ window.renderHydrograph = function (item, rows) {
     let columns = item.columnas || (item.columna ? [item.columna] : []);
     let labels = item.etiquetas || columns;
 
-    // Fallback para las estaciones, por si app.js entrega
-    // un objeto de selección sin columnas.
+    // Recuperar columnas de estaciones si no vienen en item
     if (!columns.length && nombreLower.includes("cabo inga")) {
         columns = ["Q_CABOINGA", "Q_CABOINGA_P"];
         labels = ["Caudal observado", "Caudal pronosticado"];
@@ -59,46 +55,47 @@ window.renderHydrograph = function (item, rows) {
         return;
     }
 
-    // --------------------------------------------------------
-    // CONFIGURACION
-    // --------------------------------------------------------
+    // ========================================================
+    // 1. CONFIGURACION TEMPORAL
+    // ========================================================
 
+    // Hora local de Peru: UTC-5
+    const inicioPronostico = new Date(
+        "2026-11-05T02:00:00-05:00"
+    );
+
+    const horasAntes = 48;
+    const horasPronostico = 72;
+
+    const inicioObservaciones = new Date(
+        inicioPronostico.getTime() - horasAntes * 3600000
+    );
+
+    const finPronostico = new Date(
+        inicioPronostico.getTime() + horasPronostico * 3600000
+    );
+
+    const esCaboInga = nombreLower.includes("cabo inga");
+    const esElTigre = nombreLower.includes("el tigre");
+    const esEstacion = esCaboInga || esElTigre;
+
+    // Colores
     const COLOR_OBSERVADO = "#38bdf8";
     const COLOR_PRONOSTICO = "#a78bfa";
     const COLOR_BANDA = "rgba(167,139,250,0.18)";
 
-    const esCaboInga = nombreLower.includes("cabo inga");
-    const esElTigre = nombreLower.includes("el tigre");
-
-    const esEstacion = esCaboInga || esElTigre;
-
+    // Correspondencia de pronostico y observado
     const forecastPairs = {
         "Q_TIGRE_P": "Q_TIGRE",
         "Q_CABOINGA_P": "Q_CABOINGA"
     };
 
-    // --------------------------------------------------------
-    // PREPARAR REGISTROS Y ORDENAR POR FECHA
-    // --------------------------------------------------------
-
-    const records = rows.map(r => ({
-        row: r,
-        date: window.parseDate(r.fecha)
-    }))
-    .filter(r => r.date instanceof Date && !isNaN(r.date.getTime()))
-    .sort((a, b) => a.date - b.date);
-
-    if (!records.length) {
-        subtitle.textContent = "No se encontraron fechas válidas.";
-        chart.innerHTML = "Revisa la columna fecha del Excel.";
-        return;
-    }
-
-    const traces = [];
-    let totalObserved = 0;
-    let totalForecast = 0;
+    // ========================================================
+    // 2. PREPARAR Y ORDENAR LOS REGISTROS
+    // ========================================================
 
     function getNumber(row, column) {
+
         const value = row[column];
 
         if (
@@ -114,35 +111,69 @@ window.renderHydrograph = function (item, rows) {
         return Number.isFinite(n) ? n : null;
     }
 
-    // --------------------------------------------------------
-    // 1. CAUDAL OBSERVADO
-    // --------------------------------------------------------
+    const records = rows.map(row => ({
+        row: row,
+        date: window.parseDate(row.fecha)
+    }))
+    .filter(r =>
+        r.date instanceof Date &&
+        !isNaN(r.date.getTime())
+    )
+    .sort((a, b) => a.date - b.date);
 
-    columns.forEach((column, i) => {
+    if (!records.length) {
+        subtitle.textContent = "No se encontraron fechas válidas.";
+        chart.innerHTML = "Revisa la columna fecha del Excel.";
+        return;
+    }
 
+    const traces = [];
+
+    let totalObserved = 0;
+    let totalForecast = 0;
+
+    // ========================================================
+    // 3. CAUDALES OBSERVADOS: EL TIGRE Y CABO INGA
+    // ========================================================
+
+    columns.forEach(column => {
+
+        // No dibujar pronosticos como observaciones
         if (forecastPairs[column]) return;
 
+        // Las quebradas no tienen caudal observado
         if (column.startsWith("QD_")) return;
 
-        const points = records
-            .map(r => ({
-                x: r.date,
-                y: getNumber(r.row, column)
-            }))
-            .filter(p => p.y !== null);
+        if (
+            column !== "Q_TIGRE" &&
+            column !== "Q_CABOINGA"
+        ) return;
 
-        if (!points.length) {
-            console.log("Sin datos observados:", column);
-            return;
-        }
+        // Ventana observada:
+        // Desde 48 horas antes del inicio y hasta donde
+        // existan datos, incluyendo observaciones posteriores.
+        const observedRecords = records.filter(r =>
+            r.date >= inicioObservaciones
+        );
 
-        totalObserved += points.length;
-
-        // CABO INGA:
-        // Se eliminan las filas vacías antes de graficar.
-        // Así se unen todos los puntos observados disponibles,
-        // aunque existan horas o días sin mediciones.
         if (column === "Q_CABOINGA") {
+
+            // Cabo Inga: mediciones puntuales.
+            // Se eliminan filas vacias para unir las mediciones
+            // existentes mediante una linea suavizada.
+            const points = observedRecords
+                .map(r => ({
+                    x: r.date,
+                    y: getNumber(r.row, column)
+                }))
+                .filter(p => p.y !== null);
+
+            if (!points.length) {
+                console.log("Sin caudales observados de Cabo Inga.");
+                return;
+            }
+
+            totalObserved += points.length;
 
             traces.push({
                 x: points.map(p => p.x),
@@ -155,8 +186,6 @@ window.renderHydrograph = function (item, rows) {
                 legendgroup: "observado",
                 showlegend: true,
 
-                connectgaps: false,
-
                 line: {
                     color: COLOR_OBSERVADO,
                     width: 3,
@@ -166,46 +195,7 @@ window.renderHydrograph = function (item, rows) {
 
                 marker: {
                     color: COLOR_OBSERVADO,
-                    size: 6,
-                    symbol: "circle"
-                },
-
-                hovertemplate:
-                    "%{x|%d/%m/%Y %H:%M}" +
-                    "<br>Caudal observado: %{y:.2f} m³/s" +
-                    "<extra></extra>"
-            });
-
-            console.log(
-                "Cabo Inga: observaciones graficadas =",
-                points.length
-            );
-
-            return;
-        }
-
-        // EL TIGRE:
-        // Mantener las fechas y los null para respetar vacíos.
-        if (column === "Q_TIGRE") {
-
-            const x = records.map(r => r.date);
-            const y = records.map(r => getNumber(r.row, column));
-
-            traces.push({
-                x,
-                y,
-                type: "scatter",
-                mode: "lines",
-
-                name: "Caudal observado",
-                legendgroup: "observado",
-                showlegend: true,
-
-                connectgaps: false,
-
-                line: {
-                    color: COLOR_OBSERVADO,
-                    width: 2.8
+                    size: 6
                 },
 
                 hovertemplate:
@@ -217,10 +207,28 @@ window.renderHydrograph = function (item, rows) {
             return;
         }
 
-        // Otras series observadas, si existieran
+        // El Tigre:
+        // Conservar null para que los vacios no se conecten.
+        const x = [];
+        const y = [];
+
+        observedRecords.forEach(r => {
+            x.push(r.date);
+            y.push(getNumber(r.row, column));
+        });
+
+        const validCount = y.filter(v => v !== null).length;
+
+        if (!validCount) {
+            console.log("Sin caudales observados de El Tigre.");
+            return;
+        }
+
+        totalObserved += validCount;
+
         traces.push({
-            x: points.map(p => p.x),
-            y: points.map(p => p.y),
+            x,
+            y,
 
             type: "scatter",
             mode: "lines",
@@ -234,13 +242,18 @@ window.renderHydrograph = function (item, rows) {
             line: {
                 color: COLOR_OBSERVADO,
                 width: 2.8
-            }
+            },
+
+            hovertemplate:
+                "%{x|%d/%m/%Y %H:%M}" +
+                "<br>Caudal observado: %{y:.2f} m³/s" +
+                "<extra></extra>"
         });
     });
 
-    // --------------------------------------------------------
-    // 2. PRONOSTICO DE EL TIGRE Y CABO INGA
-    // --------------------------------------------------------
+    // ========================================================
+    // 4. PRONOSTICO DE EL TIGRE Y CABO INGA
+    // ========================================================
 
     columns.forEach(forecastColumn => {
 
@@ -248,72 +261,42 @@ window.renderHydrograph = function (item, rows) {
 
         if (!observedColumn) return;
 
-        // Último caudal observado disponible
-        let lastObserved = null;
+        // Pronosticos solamente entre:
+        // 05/11/2026 02:00 y 08/11/2026 02:00
+        const forecastRecords = records.filter(r =>
+            r.date >= inicioPronostico &&
+            r.date <= finPronostico
+        );
 
-        for (let j = records.length - 1; j >= 0; j--) {
+        const points = forecastRecords.map(r => ({
+            x: r.date,
+            y: getNumber(r.row, forecastColumn)
+        }));
 
-            const value = getNumber(records[j].row, observedColumn);
-
-            if (value !== null) {
-                lastObserved = {
-                    date: records[j].date,
-                    value: value
-                };
-                break;
-            }
-        }
-
-        if (!lastObserved) {
+        if (!points.some(p => p.y !== null)) {
             console.log(
-                "No hay observado para iniciar pronóstico:",
-                observedColumn
+                "Sin datos de pronostico:",
+                forecastColumn
             );
             return;
         }
 
-        // Pronósticos estrictamente posteriores al último observado
-        const forecastPoints = records
-            .filter(r => r.date > lastObserved.date)
-            .map(r => ({
-                x: r.date,
-                y: getNumber(r.row, forecastColumn)
-            }));
+        const x = points.map(p => p.x);
+        const y = points.map(p => p.y);
 
-        if (!forecastPoints.some(p => p.y !== null)) {
-            console.log("No hay pronóstico válido:", forecastColumn);
-            return;
-        }
+        const lower = points.map(p =>
+            p.y === null ? null : Math.max(0, p.y * 0.80)
+        );
 
-        const xForecast = [
-            lastObserved.date,
-            ...forecastPoints.map(p => p.x)
-        ];
+        const upper = points.map(p =>
+            p.y === null ? null : p.y * 1.20
+        );
 
-        const yForecast = [
-            lastObserved.value,
-            ...forecastPoints.map(p => p.y)
-        ];
+        totalForecast += points.filter(p => p.y !== null).length;
 
-        const lower = [
-            lastObserved.value,
-            ...forecastPoints.map(p =>
-                p.y === null ? null : Math.max(0, p.y * 0.80)
-            )
-        ];
-
-        const upper = [
-            lastObserved.value,
-            ...forecastPoints.map(p =>
-                p.y === null ? null : p.y * 1.20
-            )
-        ];
-
-        totalForecast += forecastPoints.filter(p => p.y !== null).length;
-
-        // Límite inferior: oculto en la leyenda
+        // Limite inferior: no aparece en la leyenda
         traces.push({
-            x: xForecast,
+            x,
             y: lower,
 
             type: "scatter",
@@ -329,9 +312,9 @@ window.renderHydrograph = function (item, rows) {
             hoverinfo: "skip"
         });
 
-        // Límite superior: relleno de incertidumbre
+        // Limite superior y sombreado: no aparece en leyenda
         traces.push({
-            x: xForecast,
+            x,
             y: upper,
 
             type: "scatter",
@@ -350,10 +333,10 @@ window.renderHydrograph = function (item, rows) {
             hoverinfo: "skip"
         });
 
-        // Línea central del pronóstico
+        // Linea principal del pronostico
         traces.push({
-            x: xForecast,
-            y: yForecast,
+            x,
+            y,
 
             type: "scatter",
             mode: "lines",
@@ -377,29 +360,86 @@ window.renderHydrograph = function (item, rows) {
         });
     });
 
-    // --------------------------------------------------------
-    // 3. CAUDALES PRONOSTICADOS DE LAS QUEBRADAS
-    // --------------------------------------------------------
+    // ========================================================
+    // 5. PRONOSTICOS DE LAS QUEBRADAS
+    // QD_* SON EXCLUSIVAMENTE PRONOSTICADOS
+    // ========================================================
 
     columns.forEach(column => {
 
         if (!column.startsWith("QD_")) return;
 
-        const points = records.map(r => ({
+        const forecastRecords = records.filter(r =>
+            r.date >= inicioPronostico &&
+            r.date <= finPronostico
+        );
+
+        const points = forecastRecords.map(r => ({
             x: r.date,
             y: getNumber(r.row, column)
         }));
 
         if (!points.some(p => p.y !== null)) {
-            console.log("Sin pronóstico para quebrada:", column);
+            console.log("Sin pronostico para quebrada:", column);
             return;
         }
 
+        const x = points.map(p => p.x);
+        const y = points.map(p => p.y);
+
+        const lower = points.map(p =>
+            p.y === null ? null : Math.max(0, p.y * 0.80)
+        );
+
+        const upper = points.map(p =>
+            p.y === null ? null : p.y * 1.20
+        );
+
         totalForecast += points.filter(p => p.y !== null).length;
 
+        // Banda inferior
         traces.push({
-            x: points.map(p => p.x),
-            y: points.map(p => p.y),
+            x,
+            y: lower,
+
+            type: "scatter",
+            mode: "lines",
+
+            line: {
+                color: "rgba(167,139,250,0)",
+                width: 0.5
+            },
+
+            connectgaps: false,
+            showlegend: false,
+            hoverinfo: "skip"
+        });
+
+        // Banda superior
+        traces.push({
+            x,
+            y: upper,
+
+            type: "scatter",
+            mode: "lines",
+
+            line: {
+                color: "rgba(167,139,250,0)",
+                width: 0.5
+            },
+
+            fill: "tonexty",
+            fillcolor: COLOR_BANDA,
+
+            connectgaps: false,
+            showlegend: false,
+            hoverinfo: "skip"
+        });
+
+        // Pronostico de quebrada
+        traces.push({
+            x,
+            y,
 
             type: "scatter",
             mode: "lines",
@@ -423,12 +463,64 @@ window.renderHydrograph = function (item, rows) {
         });
     });
 
-    // --------------------------------------------------------
-    // 4. UMBRALES PARA EL TIGRE Y CABO INGA
-    // --------------------------------------------------------
+    // ========================================================
+    // 6. LINEA VERTICAL: INICIO DEL PRONOSTICO
+    // ========================================================
 
-    const shapes = [];
-    const annotations = [];
+    const shapes = [
+        {
+            type: "line",
+
+            // Posicion temporal exacta
+            xref: "x",
+            x0: inicioPronostico,
+            x1: inicioPronostico,
+
+            // Toda la altura del grafico
+            yref: "paper",
+            y0: 0,
+            y1: 1,
+
+            line: {
+                color: "#ffffff",
+                width: 2,
+                dash: "dash"
+            }
+        }
+    ];
+
+    const annotations = [
+        {
+            xref: "x",
+            x: inicioPronostico,
+
+            yref: "paper",
+            y: 1,
+
+            text: "INICIO PRONÓSTICO<br>05/11/2026 - 02:00",
+
+            showarrow: false,
+
+            xanchor: "left",
+            yanchor: "bottom",
+
+            xshift: 7,
+
+            font: {
+                color: "#ffffff",
+                size: 10
+            },
+
+            bgcolor: "rgba(30,41,59,0.95)",
+            bordercolor: "#94a3b8",
+            borderwidth: 1,
+            borderpad: 4
+        }
+    ];
+
+    // ========================================================
+    // 7. UMBRALES: SOLO EL TIGRE Y CABO INGA
+    // ========================================================
 
     if (esEstacion) {
 
@@ -457,6 +549,7 @@ window.renderHydrograph = function (item, rows) {
                 xref: "paper",
                 x0: 0,
                 x1: 1,
+
                 yref: "y",
                 y0: u.valor,
                 y1: u.valor,
@@ -477,6 +570,7 @@ window.renderHydrograph = function (item, rows) {
                 y: u.valor,
 
                 text: u.nombre + " (" + u.valor + " m³/s)",
+
                 showarrow: false,
 
                 font: {
@@ -490,10 +584,47 @@ window.renderHydrograph = function (item, rows) {
         });
     }
 
-    // --------------------------------------------------------
-    // 5. ESCALA DEL GRAFICO
-    // --------------------------------------------------------
+    // ========================================================
+    // 8. EXTENSION DEL EJE TEMPORAL
+    // ========================================================
 
+    // Estaciones: mostrar desde -48 h y también cualquier
+    // observacion posterior que exista.
+    // Quebradas: comenzar directamente en el inicio.
+    let ejeInicio = esEstacion
+        ? inicioObservaciones
+        : inicioPronostico;
+
+    let ejeFin = finPronostico;
+
+    if (esEstacion) {
+
+        const observacionesPosteriores = records.filter(r => {
+
+            const value = esCaboInga
+                ? getNumber(r.row, "Q_CABOINGA")
+                : getNumber(r.row, "Q_TIGRE");
+
+            return (
+                r.date >= inicioPronostico &&
+                value !== null
+            );
+        });
+
+        if (observacionesPosteriores.length) {
+
+            const ultimaObservacion =
+                observacionesPosteriores[
+                    observacionesPosteriores.length - 1
+                ].date;
+
+            if (ultimaObservacion > ejeFin) {
+                ejeFin = ultimaObservacion;
+            }
+        }
+    }
+
+    // Escala vertical
     const allValues = traces.flatMap(t =>
         (t.y || []).filter(v =>
             v !== null && Number.isFinite(v)
@@ -511,16 +642,16 @@ window.renderHydrograph = function (item, rows) {
     subtitle.textContent =
         "Observados: " + totalObserved +
         " · Pronosticados: " + totalForecast +
-        " · Unidad: m³/s";
+        " · Pronóstico: 72 horas · Unidad: m³/s";
 
     if (!traces.length) {
         chart.innerHTML = "No existen datos válidos para esta ubicación.";
         return;
     }
 
-    // --------------------------------------------------------
-    // 6. GRAFICAR
-    // --------------------------------------------------------
+    // ========================================================
+    // 9. GRAFICAR
+    // ========================================================
 
     Plotly.react(
         chart,
@@ -537,14 +668,15 @@ window.renderHydrograph = function (item, rows) {
             margin: {
                 l: 65,
                 r: 25,
-                t: 45,
+                t: 65,
                 b: 60
             },
 
             xaxis: {
                 title: "Fecha y hora",
                 gridcolor: "#26354b",
-                tickformat: "%d/%m %H:%M"
+                tickformat: "%d/%m %H:%M",
+                range: [ejeInicio, ejeFin]
             },
 
             yaxis: {
@@ -573,33 +705,41 @@ window.renderHydrograph = function (item, rows) {
 
 
 // ============================================================
-// CONVERSION DE FECHAS DEL EXCEL
+// CONVERSION DE FECHAS
 // ============================================================
 
 window.parseDate = function (value) {
 
-    if (value instanceof Date) return value;
+    if (value instanceof Date) {
+        return value;
+    }
 
+    // Fechas seriales de Excel:
+    // Se interpretan como hora local del navegador (Peru).
     if (typeof value === "number") {
 
         const d = XLSX.SSF.parse_date_code(value);
 
         if (!d) return null;
 
-        return new Date(Date.UTC(
+        return new Date(
             d.y,
             d.m - 1,
             d.d,
             d.H,
             d.M,
             Math.floor(d.S)
-        ));
+        );
     }
 
+    // Fechas de texto del Excel
+    const text = String(value).trim();
+
     const date = new Date(
-        String(value).trim().replace(" ", "T")
+        text.includes("T") ? text : text.replace(" ", "T")
     );
 
     return Number.isNaN(date.getTime()) ? null : date;
 };
+
 
