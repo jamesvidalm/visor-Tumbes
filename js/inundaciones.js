@@ -2,13 +2,16 @@
 /* ============================================================
    MAPAS DE INUNDACION - CUENCA DEL RIO TUMBES
 
+   REFERENCIA HIDROLOGICA FIJA: ESTACION EL TIGRE
+
+   - Los mapas SIEMPRE utilizan Q_TIGRE_P.
+   - No dependen de la ubicacion seleccionada en el hidrograma.
    - Seis horizontes: +12, +24, +36, +48, +60 y +72 horas.
-   - Seleccion automatica de PNG segun caudal pronosticado.
+   - Seleccion automatica de PNG segun caudal de El Tigre.
    - Imagenes georreferenciadas mediante manifest.json.
-   - Fondo predeterminado: GOOGLE SATELLITE.
-   - Alternativa: GOOGLE MAPS (calles).
-   - Selector de fondo en cada mapa.
-   - Seis mapas en una sola fila horizontal.
+   - Google Satellite predeterminado.
+   - Alternativa Google Maps.
+   - Seis mapas en una sola fila.
    ============================================================ */
 
 window.FLOOD_MANIFEST = null;
@@ -16,6 +19,9 @@ window.FLOOD_MAPS = window.FLOOD_MAPS || [];
 
 const FLOOD_FOLDER = "data/inundaciones/";
 const FLOOD_HORIZONS = [12, 24, 36, 48, 60, 72];
+
+// REFERENCIA FIJA PARA LAS MANCHAS DE INUNDACION
+const FLOOD_REFERENCE_STATION = "Q_TIGRE_P";
 
 
 /* ============================================================
@@ -69,32 +75,7 @@ window.loadFloodManifest = async function () {
 
 
 /* ============================================================
-   3. IDENTIFICAR COLUMNA DE CAUDAL PRONOSTICADO
-   ============================================================ */
-
-function getFloodForecastColumn(item) {
-
-    if (Array.isArray(item.columnas)) {
-
-        const forecastColumn = item.columnas.find(
-            column => String(column).endsWith("_P")
-        );
-
-        if (forecastColumn) {
-            return forecastColumn;
-        }
-    }
-
-    if (item.columna) {
-        return item.columna;
-    }
-
-    return null;
-}
-
-
-/* ============================================================
-   4. OBTENER CAUDAL NUMERICO
+   3. OBTENER CAUDAL NUMERICO
    ============================================================ */
 
 function getFloodNumber(value) {
@@ -114,7 +95,7 @@ function getFloodNumber(value) {
 
 
 /* ============================================================
-   5. SELECCIONAR PNG SEGUN EL CAUDAL
+   4. SELECCIONAR PNG SEGUN CAUDAL DE EL TIGRE
    ============================================================ */
 
 function getFloodImage(caudal, images) {
@@ -166,7 +147,7 @@ function getFloodImage(caudal, images) {
 
 
 /* ============================================================
-   6. FECHA Y HORA DE INICIO DEL PRONOSTICO
+   5. FECHA Y HORA DE INICIO DEL PRONOSTICO
    ============================================================ */
 
 function getFloodStartDate() {
@@ -180,10 +161,10 @@ function getFloodStartDate() {
 
 
 /* ============================================================
-   7. BUSCAR CAUDAL EN CADA HORIZONTE
+   6. BUSCAR CAUDAL DE EL TIGRE EN CADA HORIZONTE
    ============================================================ */
 
-function getFloodFlowAtHour(rows, column, targetDate) {
+function getFloodFlowAtHour(rows, targetDate) {
 
     let bestRow = null;
     let minDifference = Infinity;
@@ -207,6 +188,7 @@ function getFloodFlowAtHour(rows, column, targetDate) {
 
     });
 
+    // Tolerancia de 30 minutos.
     if (
         !bestRow ||
         minDifference > 30 * 60 * 1000
@@ -214,12 +196,15 @@ function getFloodFlowAtHour(rows, column, targetDate) {
         return null;
     }
 
-    return getFloodNumber(bestRow[column]);
+    // SIEMPRE UTILIZAR EL PRONOSTICO DE EL TIGRE
+    return getFloodNumber(
+        bestRow[FLOOD_REFERENCE_STATION]
+    );
 }
 
 
 /* ============================================================
-   8. CREAR PANEL DE MAPAS
+   7. CREAR PANEL DE MAPAS DE INUNDACION
    ============================================================ */
 
 function createFloodPanel() {
@@ -233,7 +218,9 @@ function createFloodPanel() {
     const hydroChart = document.getElementById("hydro-chart");
 
     if (!hydroChart) {
-        throw new Error("No se encontró hydro-chart en index.html.");
+        throw new Error(
+            "No se encontró hydro-chart en index.html."
+        );
     }
 
     const hydroPanel = hydroChart.closest(".panel");
@@ -248,7 +235,7 @@ function createFloodPanel() {
             <div>
                 <small>03 / MAPAS DE INUNDACION</small>
                 <h3 id="flood-title">
-                    Manchas de inundación pronosticadas
+                    Escenarios de inundación - Estación El Tigre
                 </h3>
             </div>
 
@@ -256,7 +243,7 @@ function createFloodPanel() {
         </div>
 
         <div id="scenario-label" class="subinfo">
-            Selecciona una estación o quebrada en el mapa.
+            Mapas asociados al pronóstico de caudal de la estación El Tigre.
         </div>
 
         <div id="flood-grid"></div>
@@ -291,8 +278,6 @@ function createFloodPanel() {
             padding: 10px 8px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: flex-start;
             gap: 5px;
             border-bottom: 1px solid #26354b;
         }
@@ -332,23 +317,23 @@ function createFloodPanel() {
         }
 
         @media (max-width: 1100px) {
-
             #flood-grid {
                 overflow-x: auto;
                 grid-template-columns: repeat(6, 220px);
             }
-
         }
     `;
 
-    document.head.appendChild(style);
+    if (!document.getElementById("flood-map-styles")) {
+        document.head.appendChild(style);
+    }
 
     return section;
 }
 
 
 /* ============================================================
-   9. LIMPIAR MAPAS ANTERIORES
+   8. LIMPIAR MAPAS ANTERIORES
    ============================================================ */
 
 function clearFloodMaps() {
@@ -368,12 +353,12 @@ function clearFloodMaps() {
 
 
 /* ============================================================
-   10. CREAR FONDOS GOOGLE Y SELECTOR
+   9. FONDOS GOOGLE Y SELECTOR
    ============================================================ */
 
 function addFloodBaseLayers(map, bounds) {
 
-    // GOOGLE SATELLITE: fondo predeterminado.
+    // GOOGLE SATELLITE: FONDO PREDETERMINADO
     const googleSatellite = L.tileLayer(
         "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
         {
@@ -382,7 +367,7 @@ function addFloodBaseLayers(map, bounds) {
         }
     );
 
-    // GOOGLE MAPS: calles, nombres y carreteras.
+    // GOOGLE MAPS: CALLES Y NOMBRES
     const googleMaps = L.tileLayer(
         "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
         {
@@ -391,15 +376,15 @@ function addFloodBaseLayers(map, bounds) {
         }
     );
 
-    // Satellite se carga por defecto.
+    // SATELLITE POR DEFECTO
     googleSatellite.addTo(map);
 
-    // Selector de mapas base.
     const baseMaps = {
         "Google Satellite": googleSatellite,
         "Google Maps": googleMaps
     };
 
+    // SELECTOR PARA CAMBIAR EL FONDO
     L.control.layers(
         baseMaps,
         null,
@@ -414,7 +399,7 @@ function addFloodBaseLayers(map, bounds) {
 
 
 /* ============================================================
-   11. MOSTRAR LOS SEIS MAPAS
+   10. MOSTRAR LOS SEIS MAPAS
    ============================================================ */
 
 window.renderFloodImages = async function (item, rows) {
@@ -433,26 +418,37 @@ window.renderFloodImages = async function (item, rows) {
 
         grid.innerHTML = "";
 
+        // IMPORTANTE:
+        // El nombre seleccionado NO modifica la referencia
+        // de los mapas de inundacion.
         title.textContent =
-            "Manchas de inundación – " + item.nombre;
+            "Escenarios de inundación - Estación El Tigre";
 
-        const column = getFloodForecastColumn(item);
-
-        if (!column) {
+        // COMPROBAR QUE EXISTE EL PRONOSTICO DE EL TIGRE
+        if (!rows.some(row =>
+            getFloodNumber(row[FLOOD_REFERENCE_STATION]) !== null
+        )) {
 
             label.textContent =
-                "No se encontró la columna de caudal pronosticado.";
+                "No se encontraron datos de pronóstico para la estación El Tigre (Q_TIGRE_P).";
+
+            grid.innerHTML =
+                '<div class="flood-error">' +
+                'No hay datos de caudal pronosticado de El Tigre.' +
+                '</div>';
 
             return;
         }
 
+        // Cargar manifest
         const data = await window.loadFloodManifest();
 
         const startDate = getFloodStartDate();
 
         label.textContent =
-            item.nombre +
-            " · Caudal pronosticado · Inicio: " +
+            "Referencia hidrológica: Estación El Tigre" +
+            " · Columna: Q_TIGRE_P" +
+            " · Inicio: " +
             startDate.toLocaleString("es-PE", {
                 timeZone: "America/Lima",
                 day: "2-digit",
@@ -463,15 +459,16 @@ window.renderFloodImages = async function (item, rows) {
                 hour12: false
             });
 
+        // CREAR LOS SEIS HORIZONTES
         FLOOD_HORIZONS.forEach(hour => {
 
             const targetDate = new Date(
                 startDate.getTime() + hour * 3600000
             );
 
+            // SIEMPRE CAUDAL PRONOSTICADO DE EL TIGRE
             const caudal = getFloodFlowAtHour(
                 rows,
-                column,
                 targetDate
             );
 
@@ -488,8 +485,8 @@ window.renderFloodImages = async function (item, rows) {
 
             value.textContent =
                 caudal === null
-                    ? "Sin dato"
-                    : "Q = " + caudal.toFixed(2) + " m³/s";
+                    ? "Sin dato de El Tigre"
+                    : "Q El Tigre = " + caudal.toFixed(2) + " m³/s";
 
             header.appendChild(heading);
             header.appendChild(value);
@@ -507,12 +504,13 @@ window.renderFloodImages = async function (item, rows) {
 
                 mapDiv.innerHTML =
                     '<div class="flood-error">' +
-                    'No existe caudal pronosticado para este horizonte.' +
+                    'No existe caudal de El Tigre para este horizonte.' +
                     '</div>';
 
                 return;
             }
 
+            // SELECCIONAR PNG SEGUN EL CAUDAL DE EL TIGRE
             const selected = getFloodImage(
                 caudal,
                 data.images
@@ -551,25 +549,23 @@ window.renderFloodImages = async function (item, rows) {
                 return;
             }
 
-            // Crear mapa.
+            // CREAR MAPA
             const map = L.map(mapDiv, {
                 zoomControl: true,
                 attributionControl: true,
                 scrollWheelZoom: false
             });
 
-            // Límites geográficos.
             const bounds = L.latLngBounds(
                 selected.bounds[0],
                 selected.bounds[1]
             );
 
-            // Agregar fondos y selector.
-            // Google Satellite queda seleccionado por defecto.
+            // GOOGLE SATELLITE PREDETERMINADO
+            // GOOGLE MAPS COMO ALTERNATIVA
             addFloodBaseLayers(map, bounds);
 
-            // Superponer la mancha de inundación PNG.
-            // Esta capa permanece visible al cambiar el fondo.
+            // MANCHA PNG: NO CAMBIA AL SELECCIONAR OTRA UBICACION
             L.imageOverlay(
                 FLOOD_FOLDER + selected.image,
                 bounds,
@@ -585,17 +581,15 @@ window.renderFloodImages = async function (item, rows) {
             mapInfo.className = "flood-map-info";
 
             mapInfo.textContent =
-                "Imagen: " +
-                selected.id.toUpperCase() +
-                " · Umbral: " +
-                selected.threshold +
-                " m³/s";
+                "Referencia: El Tigre" +
+                " · PNG: " + selected.id.toUpperCase() +
+                " · Umbral: " + selected.threshold + " m³/s";
 
             card.appendChild(mapInfo);
 
         });
 
-        // Actualizar dimensiones.
+        // AJUSTAR DIMENSIONES DE LOS SEIS MAPAS
         setTimeout(() => {
 
             window.FLOOD_MAPS.forEach(map => {
