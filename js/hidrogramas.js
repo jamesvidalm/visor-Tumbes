@@ -1,21 +1,21 @@
 
- // ============================================================
- // HIDROGRAMAS - CUENCA DEL RIO TUMBES
- //
- // INICIO FIJO DEL PRONOSTICO:
- // 05 NOVIEMBRE 2026 - 02:00 HORA PERU (UTC-5)
- //
- // ESTACIONES:
- // - Observado: desde 48 horas antes y hasta donde exista dato.
- // - Pronosticado: desde la hora de inicio hasta +72 horas.
- //
- // QUEBRADAS:
- // - Solo caudal pronosticado desde el inicio hasta +72 horas.
- //
- // - Banda de incertidumbre +/- 20 %
- // - Linea vertical de inicio de pronostico
- // - Umbrales de estaciones: 600, 800 y 1000 m3/s
- // ============================================================
+// ============================================================
+// HIDROGRAMAS - CUENCA DEL RIO TUMBES
+//
+// INICIO FIJO DEL PRONOSTICO:
+// 05 NOVIEMBRE 2026 - 02:00 HORA PERU (UTC-5)
+//
+// ESTACIONES:
+// - Observado: desde 48 horas antes y hasta donde exista dato.
+// - Pronosticado: desde la hora de inicio hasta +72 horas.
+//
+// QUEBRADAS:
+// - Solo caudal pronosticado desde el inicio hasta +72 horas.
+//
+// - Banda de incertidumbre +/- 20 %
+// - Linea vertical de inicio de pronostico
+// - Umbrales de estaciones: 600, 800 y 1000 m3/s
+// ============================================================
 
 window.renderHydrograph = function (item, rows) {
 
@@ -701,6 +701,14 @@ window.renderHydrograph = function (item, rows) {
             displaylogo: false
         }
     );
+
+    // ========================================================
+    // 10. ACTUALIZAR LOS MAPAS DE INUNDACION
+    // ========================================================
+
+    if (window.renderFloodImages) {
+        window.renderFloodImages(item, rows);
+    }
 };
 
 
