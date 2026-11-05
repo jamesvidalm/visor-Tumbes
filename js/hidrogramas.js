@@ -1,6 +1,6 @@
 
 // ============================================================
-// HIDROGRAMAS - CUENCA DEL RIO TUMBES gggg
+// HIDROGRAMAS - CUENCA DEL RIO TUMBES
 //
 // INICIO FIJO DEL PRONOSTICO:
 // 05 NOVIEMBRE 2026 - 02:00 HORA PERU (UTC-5)
