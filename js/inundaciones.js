@@ -2,17 +2,15 @@
 /* ============================================================
    MAPAS DE INUNDACION - CUENCA DEL RIO TUMBES
 
-   REFERENCIA HIDROLOGICA FIJA: ESTACION EL TIGRE
-
-   - Los mapas SIEMPRE utilizan Q_TIGRE_P.
-   - No dependen de la ubicacion seleccionada en el hidrograma.
+   - Referencia hidrologica fija: Q_TIGRE_P.
    - Seis horizontes: +12, +24, +36, +48, +60 y +72 horas.
    - Seleccion automatica de PNG segun caudal de El Tigre.
    - Imagenes georreferenciadas mediante manifest.json.
    - Google Satellite predeterminado.
    - Alternativa Google Maps.
-   - Leyenda de profundidad de inundacion con 10 clases.
-   - Se elimina la informacion PNG y umbral de las tarjetas.
+   - LEYENDA DISCRETA DENTRO DE CADA MAPA.
+   - 10 intervalos de profundidad en metros.
+   - Sin textos PNG, Referencia ni Umbral en las tarjetas.
    ============================================================ */
 
 window.FLOOD_MANIFEST = null;
@@ -20,11 +18,8 @@ window.FLOOD_MAPS = window.FLOOD_MAPS || [];
 
 const FLOOD_FOLDER = "data/inundaciones/";
 const FLOOD_HORIZONS = [12, 24, 36, 48, 60, 72];
-
-// REFERENCIA FIJA PARA LAS MANCHAS DE INUNDACION
 const FLOOD_REFERENCE_STATION = "Q_TIGRE_P";
 
-// PALETA DE COLORES DE PROFUNDIDAD (10 CLASES)
 const FLOOD_COLORS = [
     "#d6f0ff",
     "#c4e7ff",
@@ -38,19 +33,18 @@ const FLOOD_COLORS = [
     "#0b3d91"
 ];
 
-// CORTES DE CLASIFICACION DEL ARCHIVO q100.json
 const FLOOD_DEFAULT_BREAKS = [
-    0.001042068,
-    0.700313395,
-    1.399584722,
-    2.098856050,
-    2.798127377,
-    3.497398704,
-    4.196670032,
-    4.895941359,
-    5.595212687,
-    6.294484014,
-    6.993755341
+    0.0010420680046081543,
+    0.7003133952617645,
+    1.3995847225189209,
+    2.098856049776077,
+    2.7981273770332336,
+    3.49739870429039,
+    4.196670031547546,
+    4.895941358804703,
+    5.595212686061859,
+    6.294484013319015,
+    6.993755340576172
 ];
 
 window.FLOOD_BREAKS = null;
@@ -107,7 +101,7 @@ window.loadFloodManifest = async function () {
 
 
 /* ============================================================
-   3. CARGAR CORTES DE LA LEYENDA
+   3. CARGAR INTERVALOS DE PROFUNDIDAD
    ============================================================ */
 
 async function loadFloodBreaks() {
@@ -132,19 +126,16 @@ async function loadFloodBreaks() {
             Array.isArray(data.breaks) &&
             data.breaks.length === 11
         ) {
-
             window.FLOOD_BREAKS = data.breaks;
-
             return window.FLOOD_BREAKS;
         }
 
     } catch (error) {
 
         console.warn(
-            "Se utilizaran los cortes de clasificacion predeterminados:",
+            "Se utilizaran los intervalos predeterminados:",
             error
         );
-
     }
 
     window.FLOOD_BREAKS = FLOOD_DEFAULT_BREAKS;
@@ -205,13 +196,9 @@ function getFloodImage(caudal, images) {
 
     const minimum = available[0].threshold;
 
-    let target;
-
-    if (caudal <= minimum) {
-        target = minimum;
-    } else {
-        target = Math.floor(caudal / 25) * 25;
-    }
+    const target = caudal <= minimum
+        ? minimum
+        : Math.floor(caudal / 25) * 25;
 
     let selected = available
         .filter(image => image.threshold <= target)
@@ -267,7 +254,6 @@ function getFloodFlowAtHour(rows, targetDate) {
 
     });
 
-    // Tolerancia de 30 minutos.
     if (
         !bestRow ||
         minDifference > 30 * 60 * 1000
@@ -275,7 +261,6 @@ function getFloodFlowAtHour(rows, targetDate) {
         return null;
     }
 
-    // SIEMPRE UTILIZAR EL PRONOSTICO DE EL TIGRE
     return getFloodNumber(
         bestRow[FLOOD_REFERENCE_STATION]
     );
@@ -283,65 +268,66 @@ function getFloodFlowAtHour(rows, targetDate) {
 
 
 /* ============================================================
-   8. CREAR LEYENDA DE PROFUNDIDAD DE INUNDACION
+   8. LEYENDA DENTRO DEL MAPA LEAFLET
+
+   Cada mapa tendrá su propio control de leyenda.
+   Posición: esquina inferior derecha.
    ============================================================ */
 
-function createFloodLegend() {
+function addFloodLegend(map, breaks) {
 
-    const grid = document.getElementById("flood-grid");
+    const legend = L.control({
+        position: "bottomright"
+    });
 
-    if (!grid) return;
+    legend.onAdd = function () {
 
-    let legend = document.getElementById("flood-legend");
+        const div = L.DomUtil.create(
+            "div",
+            "flood-map-legend"
+        );
 
-    if (!legend) {
+        let html = `
+            <div class="flood-map-legend-title">
+                Profundidad (m)
+            </div>
+            <div class="flood-map-legend-content">
+        `;
 
-        legend = document.createElement("div");
+        for (let i = 0; i < 10; i++) {
 
-        legend.id = "flood-legend";
+            const lower = Number(breaks[i]);
+            const upper = Number(breaks[i + 1]);
 
-        grid.insertAdjacentElement("afterend", legend);
-    }
+            html += `
+                <div class="flood-map-legend-row">
+                    <span
+                        class="flood-map-legend-color"
+                        style="background:${FLOOD_COLORS[i]}"
+                    ></span>
 
-    const breaks = window.FLOOD_BREAKS || FLOOD_DEFAULT_BREAKS;
-
-    let html = `
-        <div class="flood-legend-title">
-            <strong>Profundidad de inundación (m)</strong>
-            <span>10 clases</span>
-        </div>
-
-        <div class="flood-legend-items">
-    `;
-
-    for (let i = 0; i < 10; i++) {
-
-        const lower = Number(breaks[i]);
-        const upper = Number(breaks[i + 1]);
+                    <span>
+                        ${lower.toFixed(2)} – ${upper.toFixed(2)}
+                    </span>
+                </div>
+            `;
+        }
 
         html += `
-            <div class="flood-legend-item">
-                <span
-                    class="flood-legend-color"
-                    style="background:${FLOOD_COLORS[i]}"
-                ></span>
-
-                <span class="flood-legend-range">
-                    ${lower.toFixed(2)} – ${upper.toFixed(2)} m
-                </span>
             </div>
         `;
-    }
 
-    html += `
-        </div>
+        div.innerHTML = html;
 
-        <div class="flood-legend-note">
-            Las profundidades se expresan en metros.
-        </div>
-    `;
+        L.DomEvent.disableClickPropagation(div);
+        L.DomEvent.disableScrollPropagation(div);
 
-    legend.innerHTML = html;
+        return div;
+    };
+
+    legend.addTo(map);
+
+    return legend;
 }
 
 
@@ -389,8 +375,6 @@ function createFloodPanel() {
         </div>
 
         <div id="flood-grid"></div>
-
-        <div id="flood-legend"></div>
     `;
 
     hydroPanel.insertAdjacentElement("afterend", section);
@@ -408,6 +392,7 @@ function createFloodPanel() {
             margin-top: 16px;
             width: 100%;
             overflow-x: auto;
+            align-items: start;
         }
 
         .flood-card {
@@ -440,6 +425,7 @@ function createFloodPanel() {
             width: 100%;
             height: 280px;
             background: #dce5eb;
+            position: relative;
         }
 
         .flood-error {
@@ -453,69 +439,59 @@ function createFloodPanel() {
             font-size: 11px;
         }
 
-        /* LEYENDA DE PROFUNDIDAD */
+        /* LEYENDA SUPERPUESTA DENTRO DE CADA MAPA */
 
-        #flood-legend {
-            margin-top: 18px;
-            padding: 15px 18px;
-            border: 1px solid #26354b;
-            border-radius: 10px;
-            background: #111d2d;
+        .flood-map-legend {
+            background: rgba(255,255,255,0.96);
+            color: #172033;
+            border: 1px solid #9ca3af;
+            border-radius: 6px;
+            padding: 8px 9px;
+            box-shadow: 0 1px 7px rgba(0,0,0,0.30);
+            font-family: Arial, sans-serif;
+            width: 145px;
+            max-height: 230px;
+            overflow-y: auto;
         }
 
-        .flood-legend-title {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 13px;
-        }
-
-        .flood-legend-title strong {
-            color: #e5edf7;
-            font-size: 13px;
-        }
-
-        .flood-legend-title span {
-            color: #a9bad0;
+        .flood-map-legend-title {
             font-size: 11px;
+            font-weight: 800;
+            text-align: center;
+            padding-bottom: 6px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #d1d5db;
         }
 
-        .flood-legend-items {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 12px 18px;
+        .flood-map-legend-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
-        .flood-legend-item {
+        .flood-map-legend-row {
             display: flex;
             align-items: center;
-            gap: 8px;
-            min-width: 0;
-        }
-
-        .flood-legend-color {
-            display: inline-block;
-            flex: 0 0 24px;
-            width: 24px;
-            height: 16px;
-            border: 1px solid rgba(255,255,255,0.25);
-            border-radius: 3px;
-        }
-
-        .flood-legend-range {
-            color: #d7e2f0;
-            font-size: 11px;
+            gap: 6px;
+            font-size: 9px;
+            line-height: 1.2;
             white-space: nowrap;
         }
 
-        .flood-legend-note {
-            margin-top: 12px;
-            color: #91a4bc;
-            font-size: 10px;
+        .flood-map-legend-color {
+            display: inline-block;
+            width: 17px;
+            height: 12px;
+            flex: 0 0 17px;
+            border: 1px solid rgba(0,0,0,0.25);
+            border-radius: 1px;
         }
 
-        .flood-card .leaflet-control-attribution {
+        .flood-map .leaflet-control {
+            margin: 7px;
+        }
+
+        .flood-map .leaflet-control-attribution {
             font-size: 8px;
         }
 
@@ -525,20 +501,17 @@ function createFloodPanel() {
                 overflow-x: auto;
                 grid-template-columns: repeat(6, 220px);
             }
-
-            .flood-legend-items {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
         }
 
         @media (max-width: 600px) {
 
-            #flood-legend {
-                padding: 12px;
+            #flood-grid {
+                grid-template-columns: repeat(6, 220px);
             }
 
-            .flood-legend-items {
-                grid-template-columns: 1fr;
+            .flood-map-legend {
+                width: 135px;
+                padding: 7px;
             }
         }
     `;
@@ -577,7 +550,6 @@ function clearFloodMaps() {
 
 function addFloodBaseLayers(map, bounds) {
 
-    // GOOGLE SATELLITE: FONDO PREDETERMINADO
     const googleSatellite = L.tileLayer(
         "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
         {
@@ -586,7 +558,6 @@ function addFloodBaseLayers(map, bounds) {
         }
     );
 
-    // GOOGLE MAPS: CALLES Y NOMBRES
     const googleMaps = L.tileLayer(
         "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
         {
@@ -595,7 +566,6 @@ function addFloodBaseLayers(map, bounds) {
         }
     );
 
-    // SATELLITE POR DEFECTO
     googleSatellite.addTo(map);
 
     const baseMaps = {
@@ -603,7 +573,6 @@ function addFloodBaseLayers(map, bounds) {
         "Google Maps": googleMaps
     };
 
-    // SELECTOR PARA CAMBIAR EL FONDO
     L.control.layers(
         baseMaps,
         null,
@@ -637,19 +606,13 @@ window.renderFloodImages = async function (item, rows) {
 
         grid.innerHTML = "";
 
-        // IMPORTANTE:
-        // El nombre seleccionado NO modifica la referencia
-        // de los mapas de inundacion.
-
         title.textContent =
             "Escenarios de inundación - Estación El Tigre";
 
-        // CARGAR LEYENDA
-        await loadFloodBreaks();
+        // CARGAR INTERVALOS DE PROFUNDIDAD
+        const breaks = await loadFloodBreaks();
 
-        createFloodLegend();
-
-        // COMPROBAR QUE EXISTE EL PRONOSTICO DE EL TIGRE
+        // COMPROBAR PRONOSTICO DE EL TIGRE
         if (!rows.some(row =>
             getFloodNumber(row[FLOOD_REFERENCE_STATION]) !== null
         )) {
@@ -665,7 +628,7 @@ window.renderFloodImages = async function (item, rows) {
             return;
         }
 
-        // Cargar manifest
+        // CARGAR MANIFEST
         const data = await window.loadFloodManifest();
 
         const startDate = getFloodStartDate();
@@ -690,19 +653,23 @@ window.renderFloodImages = async function (item, rows) {
                 startDate.getTime() + hour * 3600000
             );
 
-            // SIEMPRE CAUDAL PRONOSTICADO DE EL TIGRE
             const caudal = getFloodFlowAtHour(
                 rows,
                 targetDate
             );
 
+            // TARJETA
             const card = document.createElement("article");
+
             card.className = "flood-card";
 
+            // ENCABEZADO
             const header = document.createElement("div");
+
             header.className = "flood-card-header";
 
             const heading = document.createElement("strong");
+
             heading.textContent = "+" + hour + " horas";
 
             const value = document.createElement("span");
@@ -715,7 +682,9 @@ window.renderFloodImages = async function (item, rows) {
             header.appendChild(heading);
             header.appendChild(value);
 
+            // CONTENEDOR DEL MAPA
             const mapDiv = document.createElement("div");
+
             mapDiv.className = "flood-map";
             mapDiv.id = "flood-map-" + hour;
 
@@ -734,7 +703,7 @@ window.renderFloodImages = async function (item, rows) {
                 return;
             }
 
-            // SELECCIONAR PNG SEGUN EL CAUDAL DE EL TIGRE
+            // SELECCIONAR PNG SEGUN CAUDAL
             const selected = getFloodImage(
                 caudal,
                 data.images
@@ -785,11 +754,10 @@ window.renderFloodImages = async function (item, rows) {
                 selected.bounds[1]
             );
 
-            // GOOGLE SATELLITE PREDETERMINADO
-            // GOOGLE MAPS COMO ALTERNATIVA
+            // FONDOS GOOGLE
             addFloodBaseLayers(map, bounds);
 
-            // MANCHA PNG
+            // MANCHA DE INUNDACION
             L.imageOverlay(
                 FLOOD_FOLDER + selected.image,
                 bounds,
@@ -799,10 +767,10 @@ window.renderFloodImages = async function (item, rows) {
                 }
             ).addTo(map);
 
-            window.FLOOD_MAPS.push(map);
+            // LEYENDA DENTRO DEL MAPA
+            addFloodLegend(map, breaks);
 
-            // NO SE CREA mapInfo:
-            // SE ELIMINA REFERENCIA, PNG Y UMBRAL DE LAS TARJETAS.
+            window.FLOOD_MAPS.push(map);
 
         });
 
