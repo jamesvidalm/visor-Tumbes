@@ -1,114 +1,94 @@
 // ============================================================
-// HIDROGRAMAS - VISOR DE CAUDALES TUMBES
+// HIDROGRAMAS - CUENCA DEL RIO TUMBES
+// Compatible con los elementos existentes de index.html
 // ============================================================
 
 window.renderHydrograph = function (item, rows) {
 
-    // --------------------------------------------------------
-    // 1. ASEGURAR QUE EXISTAN LOS ELEMENTOS DEL HIDROGRAMA
-    // --------------------------------------------------------
+    const title = document.getElementById("hydro-title");
+    const subtitle = document.getElementById("hydro-subtitle");
+    const chart = document.getElementById("hydro-chart");
 
-    let panel = document.querySelector(".hydro-panel");
-
-    if (!panel) {
-        panel = document.createElement("section");
-        panel.className = "panel hydro-panel";
-        document.querySelector("main")?.appendChild(panel);
+    // Verificar elementos HTML
+    if (!title || !subtitle || !chart) {
+        console.error("No se encontraron hydro-title, hydro-subtitle o hydro-chart en index.html");
+        return;
     }
-
-    let title = document.getElementById("hydro-title");
-
-    if (!title) {
-        title = document.createElement("h3");
-        title.id = "hydro-title";
-        panel.appendChild(title);
-    }
-
-    let info = document.getElementById("selection-info");
-
-    if (!info) {
-        info = document.createElement("div");
-        info.id = "selection-info";
-        panel.appendChild(info);
-    }
-
-    let chart = document.getElementById("hydro-chart");
-
-    if (!chart) {
-        chart = document.createElement("div");
-        chart.id = "hydro-chart";
-        chart.style.width = "100%";
-        chart.style.minHeight = "400px";
-        panel.appendChild(chart);
-    }
-
-    // --------------------------------------------------------
-    // 2. IDENTIFICAR SERIES
-    // --------------------------------------------------------
 
     rows = Array.isArray(rows) ? rows : [];
 
-    const columns = item.columnas || [item.columna];
+    const columns = item.columnas || (item.columna ? [item.columna] : []);
     const labels = item.etiquetas || columns;
 
     title.textContent = item.nombre || "Hidrograma";
 
-    // --------------------------------------------------------
-    // 3. CONSTRUIR SERIES SIN ELIMINAR LOS VALORES FALTANTES
-    // --------------------------------------------------------
+    if (columns.length === 0 || rows.length === 0) {
+        subtitle.textContent = "No hay datos disponibles.";
+        chart.innerHTML = "No existen datos para esta ubicación.";
+        return;
+    }
+
+    // Fechas
+    const dates = rows.map(r => window.parseDate(r.fecha));
 
     const traces = [];
+    let totalValid = 0;
 
     columns.forEach((column, i) => {
 
+        // Mantener los valores faltantes como null
         const values = rows.map(r => {
             const value = r[column];
 
             if (
                 value === null ||
                 value === undefined ||
-                value === "" ||
-                !Number.isFinite(Number(value))
+                String(value).trim() === ""
             ) {
                 return null;
             }
 
-            return Number(value);
+            const number = Number(value);
+
+            return Number.isFinite(number) ? number : null;
         });
 
-        // No dibujar una serie que no tenga ningún dato válido
         const validCount = values.filter(v => v !== null).length;
 
-        if (validCount === 0) return;
+        // No dibujar series sin datos
+        if (validCount === 0) {
+            console.log("Sin datos para:", column);
+            return;
+        }
+
+        totalValid += validCount;
 
         const label = labels[i] || column;
-        const name = String(item.nombre || "").toLowerCase();
 
+        // Configuración visual
         let mode = "lines";
         let line = {
-            width: 2.5,
-            color: ["#42c8e8", "#f59e0b", "#a78bfa"][i % 3]
+            color: "#42c8e8",
+            width: 2.5
         };
-        let marker = undefined;
 
-        // Cabo Inga observado: puntos aislados, sin línea
-        if (
-            name.includes("cabo inga") &&
-            column === "Q_CABOINGA"
-        ) {
+        let marker = {
+            color: "#42c8e8",
+            size: 5
+        };
+
+        // Cabo Inga observado: puntos aislados
+        if (column === "Q_CABOINGA") {
             mode = "markers";
             marker = {
-                size: 6,
-                color: "#42c8e8"
+                color: "#42c8e8",
+                size: 7,
+                symbol: "circle"
             };
         }
 
-        // El Tigre observado: línea continua solo entre
-        // observaciones consecutivas, respetando los vacíos
-        if (
-            name.includes("el tigre") &&
-            column === "Q_TIGRE"
-        ) {
+        // El Tigre observado: línea con interrupciones
+        if (column === "Q_TIGRE") {
             mode = "lines";
             line = {
                 color: "#42c8e8",
@@ -116,10 +96,10 @@ window.renderHydrograph = function (item, rows) {
             };
         }
 
-        // Pronóstico: línea discontinua
+        // Pronósticos: líneas discontinuas
         if (
-            column.includes("_P") ||
-            label.toLowerCase().includes("pronostic")
+            column === "Q_TIGRE_P" ||
+            column === "Q_CABOINGA_P"
         ) {
             mode = "lines";
             line = {
@@ -127,58 +107,51 @@ window.renderHydrograph = function (item, rows) {
                 width: 2.5,
                 dash: "dash"
             };
+            marker = {
+                color: "#f59e0b",
+                size: 4
+            };
         }
 
-        const trace = {
-            x: rows.map(r => window.parseDate(r.fecha)),
+        // Quebradas: líneas
+        if (column.startsWith("QD_")) {
+            mode = "lines";
+            line = {
+                color: "#42c8e8",
+                width: 2.5
+            };
+        }
+
+        traces.push({
+            x: dates,
             y: values,
             type: "scatter",
             mode: mode,
             name: label,
             connectgaps: false,
             line: line,
+            marker: marker,
             hovertemplate:
                 "%{x|%d/%m/%Y %H:%M}" +
-                "<br>Q: %{y:.3f} m³/s" +
+                "<br>Caudal: %{y:.3f} m³/s" +
                 "<extra>" + label + "</extra>"
-        };
-
-        if (marker) trace.marker = marker;
-
-        traces.push(trace);
+        });
     });
 
-    // --------------------------------------------------------
-    // 4. INFORMACIÓN
-    // --------------------------------------------------------
-
-    const total = traces.reduce((n, t) => {
-        return n + t.y.filter(v => v !== null).length;
-    }, 0);
-
-    info.textContent =
-        "Variables: " +
-        columns.join(" / ") +
-        " · Registros válidos: " +
-        total +
+    subtitle.textContent =
+        "Registros válidos: " + totalValid +
         " · Unidad: m³/s";
 
-    // --------------------------------------------------------
-    // 5. MOSTRAR GRÁFICO
-    // --------------------------------------------------------
-
+    // Ninguna serie disponible
     if (traces.length === 0) {
-
         chart.innerHTML =
-            '<div class="empty-state">' +
-            'No existen datos válidos para esta ubicación.' +
+            '<div class="empty">' +
+            'No existen datos de caudal disponibles para esta ubicación.' +
             '</div>';
-
         return;
     }
 
-    chart.innerHTML = "";
-
+    // Dibujar hidrograma
     Plotly.newPlot(
         chart,
         traces,
@@ -226,31 +199,34 @@ window.renderHydrograph = function (item, rows) {
 
 
 // ============================================================
-// CONVERSIÓN DE FECHAS
+// CONVERTIR FECHAS DEL EXCEL
 // ============================================================
 
-window.parseDate = function (v) {
+window.parseDate = function (value) {
 
-    if (v instanceof Date) return v;
-
-    if (typeof v === "number") {
-
-        const d = XLSX.SSF.parse_date_code(v);
-
-        return d
-            ? new Date(Date.UTC(
-                d.y,
-                d.m - 1,
-                d.d,
-                d.H,
-                d.M,
-                Math.floor(d.S)
-            ))
-            : null;
+    if (value instanceof Date) {
+        return value;
     }
 
-    const s = String(v).trim().replace(" ", "T");
-    const d = new Date(s);
+    if (typeof value === "number") {
 
-    return isNaN(d.getTime()) ? null : d;
+        const d = XLSX.SSF.parse_date_code(value);
+
+        if (!d) return null;
+
+        return new Date(Date.UTC(
+            d.y,
+            d.m - 1,
+            d.d,
+            d.H,
+            d.M,
+            Math.floor(d.S)
+        ));
+    }
+
+    const date = new Date(
+        String(value).trim().replace(" ", "T")
+    );
+
+    return Number.isNaN(date.getTime()) ? null : date;
 };
