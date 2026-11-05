@@ -1,4 +1,3 @@
-
 window.initMap = function(points, onSelect) {
     const map = L.map("map").setView([-3.86, -80.43], 10);
 
@@ -20,7 +19,6 @@ window.initMap = function(points, onSelect) {
 
         marker.bindTooltip(p.nombre);
         marker.on("click", () => onSelect(p));
-
         bounds.push([p.lat, p.lon]);
     });
 
@@ -37,7 +35,7 @@ window.addPolygons = async function(map, onSelect) {
             const response = await fetch(CONFIG.carpetaQuebradas + q.archivo);
 
             if (!response.ok) {
-                throw new Error("No se encontró " + q.archivo);
+                throw new Error("HTTP " + response.status + ": " + q.archivo);
             }
 
             const geo = await response.json();
@@ -51,14 +49,11 @@ window.addPolygons = async function(map, onSelect) {
                 },
                 onEachFeature: (feature, layer) => {
                     layer.bindTooltip(q.nombre);
-
-                    layer.on("click", () => {
-                        onSelect({
-                            nombre: q.nombre,
-                            columna: q.columna,
-                            tipo: "quebrada"
-                        });
-                    });
+                    layer.on("click", () => onSelect({
+                        nombre: q.nombre,
+                        columna: q.columna,
+                        tipo: "quebrada"
+                    }));
                 }
             }).addTo(map);
 
@@ -67,3 +62,4 @@ window.addPolygons = async function(map, onSelect) {
         }
     }
 };
+
