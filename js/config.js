@@ -7,6 +7,12 @@ window.CONFIG = {
     hojaCaudales: "Hoja1",
     hojaUbicaciones: "Ubicacion",
 
+    // INICIO DEL PRONOSTICO
+    inicioPronostico: "2026-11-05T02:00:00-05:00",
+
+    // CARPETA DE MAPAS DE INUNDACION
+    manifestInundaciones: "data/inundaciones/manifest.json",
+
     puntos: [
         {
             id: "El Tigre",
@@ -71,8 +77,5 @@ window.CONFIG = {
             archivo: "ceibal.geojson",
             columna: "QD_CEIBAL"
         }
-    ],
-
-    manifestInundaciones: "data/inundaciones/manifest.json"
+    ]
 };
-
