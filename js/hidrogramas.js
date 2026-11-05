@@ -1,7 +1,23 @@
 
  // ============================================================
- // HIDROGRAMAS - CUENCA DEL RIO TUMBES
- // OBSERVADO + PRONOSTICADO + BANDA DE INCERTIDUMBRE
+ // VISOR HIDROLOGICO - CUENCA DEL RIO TUMBES
+ //
+ // EL TIGRE:
+ //   Q_TIGRE       = Observado
+ //   Q_TIGRE_P     = Pronosticado
+ //
+ // CABO INGA:
+ //   Q_CABOINGA    = Observado (puntos unidos con spline)
+ //   Q_CABOINGA_P  = Pronosticado
+ //
+ // QUEBRADAS:
+ //   QD_*          = Pronosticado
+ //
+ // PRONOSTICO:
+ //   Banda de incertidumbre +/- 20 %
+ //
+ // UMBRALES:
+ //   Amarillo 600 | Naranja 800 | Rojo 1000 m3/s
  // ============================================================
 
 window.renderHydrograph = function (item, rows) {
@@ -17,268 +33,318 @@ window.renderHydrograph = function (item, rows) {
 
     rows = Array.isArray(rows) ? rows : [];
 
-    const columns = item.columnas || (item.columna ? [item.columna] : []);
-    const labels = item.etiquetas || columns;
+    const nombre = String(item.nombre || item.id || "").trim();
+    const nombreLower = nombre.toLowerCase();
 
-    title.textContent = item.nombre || "Hidrograma";
+    let columns = item.columnas || (item.columna ? [item.columna] : []);
+    let labels = item.etiquetas || columns;
 
-    if (!columns.length || !rows.length) {
+    // Fallback para las estaciones, por si app.js entrega
+    // un objeto de selección sin columnas.
+    if (!columns.length && nombreLower.includes("cabo inga")) {
+        columns = ["Q_CABOINGA", "Q_CABOINGA_P"];
+        labels = ["Caudal observado", "Caudal pronosticado"];
+    }
+
+    if (!columns.length && nombreLower.includes("el tigre")) {
+        columns = ["Q_TIGRE", "Q_TIGRE_P"];
+        labels = ["Caudal observado", "Caudal pronosticado"];
+    }
+
+    title.textContent = nombre || "Hidrograma";
+
+    if (!rows.length || !columns.length) {
         subtitle.textContent = "No hay datos disponibles.";
         chart.innerHTML = "No existen datos para esta ubicación.";
         return;
     }
 
-    const dates = rows.map(r => window.parseDate(r.fecha));
+    // --------------------------------------------------------
+    // CONFIGURACION
+    // --------------------------------------------------------
 
-    const traces = [];
-    let totalValid = 0;
-
-    // Colores
     const COLOR_OBSERVADO = "#38bdf8";
     const COLOR_PRONOSTICO = "#a78bfa";
     const COLOR_BANDA = "rgba(167,139,250,0.18)";
+
+    const esCaboInga = nombreLower.includes("cabo inga");
+    const esElTigre = nombreLower.includes("el tigre");
+
+    const esEstacion = esCaboInga || esElTigre;
 
     const forecastPairs = {
         "Q_TIGRE_P": "Q_TIGRE",
         "Q_CABOINGA_P": "Q_CABOINGA"
     };
 
-    // ========================================================
-    // 1. CAUDALES OBSERVADOS
-    // ========================================================
+    // --------------------------------------------------------
+    // PREPARAR REGISTROS Y ORDENAR POR FECHA
+    // --------------------------------------------------------
+
+    const records = rows.map(r => ({
+        row: r,
+        date: window.parseDate(r.fecha)
+    }))
+    .filter(r => r.date instanceof Date && !isNaN(r.date.getTime()))
+    .sort((a, b) => a.date - b.date);
+
+    if (!records.length) {
+        subtitle.textContent = "No se encontraron fechas válidas.";
+        chart.innerHTML = "Revisa la columna fecha del Excel.";
+        return;
+    }
+
+    const traces = [];
+    let totalObserved = 0;
+    let totalForecast = 0;
+
+    function getNumber(row, column) {
+        const value = row[column];
+
+        if (
+            value === null ||
+            value === undefined ||
+            String(value).trim() === ""
+        ) {
+            return null;
+        }
+
+        const n = Number(value);
+
+        return Number.isFinite(n) ? n : null;
+    }
+
+    // --------------------------------------------------------
+    // 1. CAUDAL OBSERVADO
+    // --------------------------------------------------------
 
     columns.forEach((column, i) => {
 
         if (forecastPairs[column]) return;
 
-        const values = rows.map(r => {
+        if (column.startsWith("QD_")) return;
 
-            const value = r[column];
+        const points = records
+            .map(r => ({
+                x: r.date,
+                y: getNumber(r.row, column)
+            }))
+            .filter(p => p.y !== null);
 
-            if (
-                value === null ||
-                value === undefined ||
-                String(value).trim() === ""
-            ) {
-                return null;
-            }
+        if (!points.length) {
+            console.log("Sin datos observados:", column);
+            return;
+        }
 
-            const n = Number(value);
+        totalObserved += points.length;
 
-            return Number.isFinite(n) ? n : null;
-        });
-
-        const validCount = values.filter(v => v !== null).length;
-
-        if (validCount === 0) return;
-
-        totalValid += validCount;
-
-        const label = labels[i] || column;
-
-        let line = {
-            color: COLOR_OBSERVADO,
-            width: 2.8
-        };
-
-        // Cabo Inga: unir observaciones con línea suavizada
+        // CABO INGA:
+        // Se eliminan las filas vacías antes de graficar.
+        // Así se unen todos los puntos observados disponibles,
+        // aunque existan horas o días sin mediciones.
         if (column === "Q_CABOINGA") {
-            line = {
-                color: COLOR_OBSERVADO,
-                width: 3,
-                shape: "spline",
-                smoothing: 1.15
-            };
+
+            traces.push({
+                x: points.map(p => p.x),
+                y: points.map(p => p.y),
+
+                type: "scatter",
+                mode: "lines+markers",
+
+                name: "Caudal observado",
+                legendgroup: "observado",
+                showlegend: true,
+
+                connectgaps: false,
+
+                line: {
+                    color: COLOR_OBSERVADO,
+                    width: 3,
+                    shape: "spline",
+                    smoothing: 1.1
+                },
+
+                marker: {
+                    color: COLOR_OBSERVADO,
+                    size: 6,
+                    symbol: "circle"
+                },
+
+                hovertemplate:
+                    "%{x|%d/%m/%Y %H:%M}" +
+                    "<br>Caudal observado: %{y:.2f} m³/s" +
+                    "<extra></extra>"
+            });
+
+            console.log(
+                "Cabo Inga: observaciones graficadas =",
+                points.length
+            );
+
+            return;
         }
 
-        // El Tigre: línea observada respetando datos faltantes
+        // EL TIGRE:
+        // Mantener las fechas y los null para respetar vacíos.
         if (column === "Q_TIGRE") {
-            line = {
-                color: COLOR_OBSERVADO,
-                width: 2.8
-            };
+
+            const x = records.map(r => r.date);
+            const y = records.map(r => getNumber(r.row, column));
+
+            traces.push({
+                x,
+                y,
+                type: "scatter",
+                mode: "lines",
+
+                name: "Caudal observado",
+                legendgroup: "observado",
+                showlegend: true,
+
+                connectgaps: false,
+
+                line: {
+                    color: COLOR_OBSERVADO,
+                    width: 2.8
+                },
+
+                hovertemplate:
+                    "%{x|%d/%m/%Y %H:%M}" +
+                    "<br>Caudal observado: %{y:.2f} m³/s" +
+                    "<extra></extra>"
+            });
+
+            return;
         }
 
-        // Quebradas
-        if (column.startsWith("QD_")) {
-            line = {
-                color: COLOR_OBSERVADO,
-                width: 2.8
-            };
-        }
-
+        // Otras series observadas, si existieran
         traces.push({
-            x: dates,
-            y: values,
+            x: points.map(p => p.x),
+            y: points.map(p => p.y),
+
             type: "scatter",
             mode: "lines",
+
             name: "Caudal observado",
             legendgroup: "observado",
             showlegend: true,
+
             connectgaps: false,
-            line: line,
-            hovertemplate:
-                "%{x|%d/%m/%Y %H:%M}" +
-                "<br>Caudal observado: %{y:.2f} m³/s" +
-                "<extra></extra>"
+
+            line: {
+                color: COLOR_OBSERVADO,
+                width: 2.8
+            }
         });
     });
 
-    // ========================================================
-    // 2. CAUDALES PRONOSTICADOS Y BANDA +/- 20 %
-    // ========================================================
+    // --------------------------------------------------------
+    // 2. PRONOSTICO DE EL TIGRE Y CABO INGA
+    // --------------------------------------------------------
 
-    columns.forEach((forecastColumn) => {
+    columns.forEach(forecastColumn => {
 
         const observedColumn = forecastPairs[forecastColumn];
 
         if (!observedColumn) return;
 
-        // Buscar última observación válida
-        let lastObservedIndex = -1;
+        // Último caudal observado disponible
+        let lastObserved = null;
 
-        for (let j = rows.length - 1; j >= 0; j--) {
+        for (let j = records.length - 1; j >= 0; j--) {
 
-            const value = rows[j][observedColumn];
+            const value = getNumber(records[j].row, observedColumn);
 
-            if (
-                value !== null &&
-                value !== undefined &&
-                String(value).trim() !== "" &&
-                Number.isFinite(Number(value)) &&
-                dates[j]
-            ) {
-                lastObservedIndex = j;
+            if (value !== null) {
+                lastObserved = {
+                    date: records[j].date,
+                    value: value
+                };
                 break;
             }
         }
 
-        if (lastObservedIndex < 0) return;
-
-        const lastObservedValue =
-            Number(rows[lastObservedIndex][observedColumn]);
-
-        const lastObservedDate =
-            dates[lastObservedIndex];
-
-        // Solo datos posteriores al último observado
-        const forecastIndices = [];
-
-        for (let j = lastObservedIndex + 1; j < rows.length; j++) {
-            if (dates[j]) {
-                forecastIndices.push(j);
-            }
+        if (!lastObserved) {
+            console.log(
+                "No hay observado para iniciar pronóstico:",
+                observedColumn
+            );
+            return;
         }
 
-        const validForecastIndices = forecastIndices.filter(j => {
-            const value = rows[j][forecastColumn];
+        // Pronósticos estrictamente posteriores al último observado
+        const forecastPoints = records
+            .filter(r => r.date > lastObserved.date)
+            .map(r => ({
+                x: r.date,
+                y: getNumber(r.row, forecastColumn)
+            }));
 
-            return (
-                value !== null &&
-                value !== undefined &&
-                String(value).trim() !== "" &&
-                Number.isFinite(Number(value))
-            );
-        });
+        if (!forecastPoints.some(p => p.y !== null)) {
+            console.log("No hay pronóstico válido:", forecastColumn);
+            return;
+        }
 
-        if (!validForecastIndices.length) return;
-
-        totalValid += validForecastIndices.length;
-
-        // Eje temporal del pronóstico
         const xForecast = [
-            lastObservedDate,
-            ...forecastIndices.map(j => dates[j])
+            lastObserved.date,
+            ...forecastPoints.map(p => p.x)
         ];
 
-        // Pronóstico central
         const yForecast = [
-            lastObservedValue,
-            ...forecastIndices.map(j => {
-
-                const value = rows[j][forecastColumn];
-
-                if (
-                    value === null ||
-                    value === undefined ||
-                    String(value).trim() === "" ||
-                    !Number.isFinite(Number(value))
-                ) {
-                    return null;
-                }
-
-                return Number(value);
-            })
+            lastObserved.value,
+            ...forecastPoints.map(p => p.y)
         ];
 
-        // Límite inferior -20 %
         const lower = [
-            lastObservedValue,
-            ...forecastIndices.map(j => {
-
-                const value = rows[j][forecastColumn];
-
-                if (
-                    value === null ||
-                    value === undefined ||
-                    String(value).trim() === "" ||
-                    !Number.isFinite(Number(value))
-                ) {
-                    return null;
-                }
-
-                return Math.max(0, Number(value) * 0.80);
-            })
+            lastObserved.value,
+            ...forecastPoints.map(p =>
+                p.y === null ? null : Math.max(0, p.y * 0.80)
+            )
         ];
 
-        // Límite superior +20 %
         const upper = [
-            lastObservedValue,
-            ...forecastIndices.map(j => {
-
-                const value = rows[j][forecastColumn];
-
-                if (
-                    value === null ||
-                    value === undefined ||
-                    String(value).trim() === "" ||
-                    !Number.isFinite(Number(value))
-                ) {
-                    return null;
-                }
-
-                return Number(value) * 1.20;
-            })
+            lastObserved.value,
+            ...forecastPoints.map(p =>
+                p.y === null ? null : p.y * 1.20
+            )
         ];
 
-        // Banda inferior: oculta de la leyenda
+        totalForecast += forecastPoints.filter(p => p.y !== null).length;
+
+        // Límite inferior: oculto en la leyenda
         traces.push({
             x: xForecast,
             y: lower,
+
             type: "scatter",
             mode: "lines",
+
             line: {
                 color: "rgba(167,139,250,0)",
                 width: 0.5
             },
+
             connectgaps: false,
             showlegend: false,
             hoverinfo: "skip"
         });
 
-        // Banda superior: relleno entre ambos límites
-        // También oculta de la leyenda
+        // Límite superior: relleno de incertidumbre
         traces.push({
             x: xForecast,
             y: upper,
+
             type: "scatter",
             mode: "lines",
+
             line: {
                 color: "rgba(167,139,250,0)",
                 width: 0.5
             },
+
             fill: "tonexty",
             fillcolor: COLOR_BANDA,
+
             connectgaps: false,
             showlegend: false,
             hoverinfo: "skip"
@@ -288,17 +354,22 @@ window.renderHydrograph = function (item, rows) {
         traces.push({
             x: xForecast,
             y: yForecast,
+
             type: "scatter",
             mode: "lines",
+
             name: "Caudal pronosticado",
             legendgroup: "pronosticado",
             showlegend: true,
+
             connectgaps: false,
+
             line: {
                 color: COLOR_PRONOSTICO,
                 width: 3,
                 dash: "solid"
             },
+
             hovertemplate:
                 "%{x|%d/%m/%Y %H:%M}" +
                 "<br>Caudal pronosticado: %{y:.2f} m³/s" +
@@ -306,15 +377,55 @@ window.renderHydrograph = function (item, rows) {
         });
     });
 
-    // ========================================================
-    // 3. UMBRALES PARA EL TIGRE Y CABO INGA
-    // ========================================================
+    // --------------------------------------------------------
+    // 3. CAUDALES PRONOSTICADOS DE LAS QUEBRADAS
+    // --------------------------------------------------------
 
-    const nombre = String(item.nombre || "").toLowerCase();
+    columns.forEach(column => {
 
-    const esEstacion =
-        nombre.includes("el tigre") ||
-        nombre.includes("cabo inga");
+        if (!column.startsWith("QD_")) return;
+
+        const points = records.map(r => ({
+            x: r.date,
+            y: getNumber(r.row, column)
+        }));
+
+        if (!points.some(p => p.y !== null)) {
+            console.log("Sin pronóstico para quebrada:", column);
+            return;
+        }
+
+        totalForecast += points.filter(p => p.y !== null).length;
+
+        traces.push({
+            x: points.map(p => p.x),
+            y: points.map(p => p.y),
+
+            type: "scatter",
+            mode: "lines",
+
+            name: "Caudal pronosticado",
+            legendgroup: "pronosticado",
+            showlegend: true,
+
+            connectgaps: false,
+
+            line: {
+                color: COLOR_PRONOSTICO,
+                width: 3,
+                dash: "solid"
+            },
+
+            hovertemplate:
+                "%{x|%d/%m/%Y %H:%M}" +
+                "<br>Caudal pronosticado: %{y:.2f} m³/s" +
+                "<extra></extra>"
+        });
+    });
+
+    // --------------------------------------------------------
+    // 4. UMBRALES PARA EL TIGRE Y CABO INGA
+    // --------------------------------------------------------
 
     const shapes = [];
     const annotations = [];
@@ -349,6 +460,7 @@ window.renderHydrograph = function (item, rows) {
                 yref: "y",
                 y0: u.valor,
                 y1: u.valor,
+
                 line: {
                     color: u.color,
                     width: 2,
@@ -360,23 +472,27 @@ window.renderHydrograph = function (item, rows) {
                 xref: "paper",
                 x: 1,
                 xanchor: "right",
+
                 yref: "y",
                 y: u.valor,
+
                 text: u.nombre + " (" + u.valor + " m³/s)",
                 showarrow: false,
+
                 font: {
                     color: u.color,
                     size: 10
                 },
-                bgcolor: "rgba(10,19,34,0.8)",
+
+                bgcolor: "rgba(10,19,34,0.85)",
                 borderpad: 3
             });
         });
     }
 
-    // ========================================================
-    // 4. ESCALA VERTICAL
-    // ========================================================
+    // --------------------------------------------------------
+    // 5. ESCALA DEL GRAFICO
+    // --------------------------------------------------------
 
     const allValues = traces.flatMap(t =>
         (t.y || []).filter(v =>
@@ -393,17 +509,18 @@ window.renderHydrograph = function (item, rows) {
         : undefined;
 
     subtitle.textContent =
-        "Registros válidos: " + totalValid +
+        "Observados: " + totalObserved +
+        " · Pronosticados: " + totalForecast +
         " · Unidad: m³/s";
 
-    // ========================================================
-    // 5. GRAFICAR
-    // ========================================================
-
     if (!traces.length) {
-        chart.innerHTML = "No existen datos disponibles.";
+        chart.innerHTML = "No existen datos válidos para esta ubicación.";
         return;
     }
+
+    // --------------------------------------------------------
+    // 6. GRAFICAR
+    // --------------------------------------------------------
 
     Plotly.react(
         chart,
@@ -437,8 +554,8 @@ window.renderHydrograph = function (item, rows) {
                 ...(esEstacion ? { range: [0, maxY] } : {})
             },
 
-            shapes: shapes,
-            annotations: annotations,
+            shapes,
+            annotations,
 
             hovermode: "x unified",
 
@@ -456,7 +573,7 @@ window.renderHydrograph = function (item, rows) {
 
 
 // ============================================================
-// CONVERTIR FECHAS DEL EXCEL
+// CONVERSION DE FECHAS DEL EXCEL
 // ============================================================
 
 window.parseDate = function (value) {
