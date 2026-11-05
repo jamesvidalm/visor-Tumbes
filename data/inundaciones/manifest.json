@@ -1,17 +1,448 @@
 {
-  "instrucciones": "Cada escenario debe tener objetivo, caudal_referencia y seis rutas PNG. El sistema escoge el caudal_referencia más cercano al máximo caudal de la serie seleccionada.",
-  "scenarios": [
-    {
-      "objetivo": "GENERAL",
-      "caudal_referencia": 100,
-      "imagenes": {
-        "12": "GENERAL/Q100_h12.png",
-        "24": "GENERAL/Q100_h24.png",
-        "36": "GENERAL/Q100_h36.png",
-        "48": "GENERAL/Q100_h48.png",
-        "60": "GENERAL/Q100_h60.png",
-        "72": "GENERAL/Q100_h72.png"
-      }
-    }
-  ]
+    "project": "TUMBES INUNDATION",
+    "crs": "EPSG:4326",
+    "format": "PNG",
+    "georeferenced": true,
+    "color_map": "turbo",
+    "total_images": 19,
+    "images": [
+        {
+            "id": "q100",
+            "title": "Q100",
+            "image": "q100.png",
+            "world_file": "q100.pgw",
+            "projection_file": "q100.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 55.92,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q125",
+            "title": "Q125",
+            "image": "q125.png",
+            "world_file": "q125.pgw",
+            "projection_file": "q125.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 58.36,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q150",
+            "title": "Q150",
+            "image": "q150.png",
+            "world_file": "q150.pgw",
+            "projection_file": "q150.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 62.73,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q175",
+            "title": "Q175",
+            "image": "q175.png",
+            "world_file": "q175.pgw",
+            "projection_file": "q175.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 69.9,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q200",
+            "title": "Q200",
+            "image": "q200.png",
+            "world_file": "q200.pgw",
+            "projection_file": "q200.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 80.57,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q225",
+            "title": "Q225",
+            "image": "q225.png",
+            "world_file": "q225.pgw",
+            "projection_file": "q225.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 78.25,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q25",
+            "title": "Q25",
+            "image": "q25.png",
+            "world_file": "q25.pgw",
+            "projection_file": "q25.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 51.08,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q250",
+            "title": "Q250",
+            "image": "q250.png",
+            "world_file": "q250.pgw",
+            "projection_file": "q250.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 93.42,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q275",
+            "title": "Q275",
+            "image": "q275.png",
+            "world_file": "q275.pgw",
+            "projection_file": "q275.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 107.76,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q300",
+            "title": "Q300",
+            "image": "q300.png",
+            "world_file": "q300.pgw",
+            "projection_file": "q300.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 120.59,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q325",
+            "title": "Q325",
+            "image": "q325.png",
+            "world_file": "q325.pgw",
+            "projection_file": "q325.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 133.86,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q350",
+            "title": "Q350",
+            "image": "q350.png",
+            "world_file": "q350.pgw",
+            "projection_file": "q350.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 140.63,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q375",
+            "title": "Q375",
+            "image": "q375.png",
+            "world_file": "q375.pgw",
+            "projection_file": "q375.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 148.66,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q400",
+            "title": "Q400",
+            "image": "q400.png",
+            "world_file": "q400.pgw",
+            "projection_file": "q400.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 158.94,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q450",
+            "title": "Q450",
+            "image": "q450.png",
+            "world_file": "q450.pgw",
+            "projection_file": "q450.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 178.76,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q50",
+            "title": "Q50",
+            "image": "q50.png",
+            "world_file": "q50.pgw",
+            "projection_file": "q50.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 52.97,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q500",
+            "title": "Q500",
+            "image": "q500.png",
+            "world_file": "q500.pgw",
+            "projection_file": "q500.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 199.58,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q550",
+            "title": "Q550",
+            "image": "q550.png",
+            "world_file": "q550.pgw",
+            "projection_file": "q550.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 112.58,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        },
+        {
+            "id": "q75",
+            "title": "Q75",
+            "image": "q75.png",
+            "world_file": "q75.pgw",
+            "projection_file": "q75.prj",
+            "crs": "EPSG:4326",
+            "bounds": [
+                [
+                    -3.7721592117076725,
+                    -80.53596563897048
+                ],
+                [
+                    -3.473312601581498,
+                    -80.3790413454471
+                ]
+            ],
+            "width": 945,
+            "height": 1800,
+            "size_kb": 54.37,
+            "min_value": 0.00099945068359375,
+            "max_value": 8.100556373596191
+        }
+    ],
+    "errors": []
 }
