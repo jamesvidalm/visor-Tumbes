@@ -1,20 +1,19 @@
-
 // ============================================================
 // HIDROGRAMAS - CUENCA DEL RIO TUMBES
 //
-// INICIO FIJO DEL PRONOSTICO:
-// 05 NOVIEMBRE 2026 - 02:00 HORA PERU (UTC-5)
+// INICIO DEL PRONOSTICO:
+// Se obtiene de CONFIG.inicioPronostico en js/config.js.
 //
 // ESTACIONES:
-// - Observado: desde 48 horas antes y hasta donde exista dato.
-// - Pronosticado: desde la hora de inicio hasta +72 horas.
+// - Observado: desde 48 horas antes.
+// - Pronosticado: desde el inicio hasta +72 horas.
 //
 // QUEBRADAS:
 // - Solo caudal pronosticado desde el inicio hasta +72 horas.
 //
 // - Banda de incertidumbre +/- 20 %
 // - Linea vertical de inicio de pronostico
-// - Umbrales de estaciones: 600, 800 y 1000 m3/s
+// - Umbrales: 600, 800 y 1000 m3/s
 // ============================================================
 
 window.renderHydrograph = function (item, rows) {
@@ -36,7 +35,6 @@ window.renderHydrograph = function (item, rows) {
     let columns = item.columnas || (item.columna ? [item.columna] : []);
     let labels = item.etiquetas || columns;
 
-    // Recuperar columnas de estaciones si no vienen en item
     if (!columns.length && nombreLower.includes("cabo inga")) {
         columns = ["Q_CABOINGA", "Q_CABOINGA_P"];
         labels = ["Caudal observado", "Caudal pronosticado"];
@@ -59,10 +57,38 @@ window.renderHydrograph = function (item, rows) {
     // 1. CONFIGURACION TEMPORAL
     // ========================================================
 
-    // Hora local de Peru: UTC-5
+    // UNA SOLA FECHA PARA TODO EL DASHBOARD.
+    // Se obtiene directamente de js/config.js.
+
+    if (
+        !window.CONFIG ||
+        !CONFIG.inicioPronostico
+    ) {
+        console.error("No se encontró CONFIG.inicioPronostico.");
+
+        subtitle.textContent =
+            "Configura la fecha de inicio en js/config.js.";
+
+        chart.innerHTML =
+            "No se pudo determinar el inicio del pronóstico.";
+
+        return;
+    }
+
     const inicioPronostico = new Date(
-        "2026-11-05T08:00:00-05:00"
+        CONFIG.inicioPronostico
     );
+
+    if (isNaN(inicioPronostico.getTime())) {
+
+        subtitle.textContent =
+            "La fecha de inicio configurada no es válida.";
+
+        chart.innerHTML =
+            "Revisa CONFIG.inicioPronostico en js/config.js.";
+
+        return;
+    }
 
     const horasAntes = 48;
     const horasPronostico = 72;
@@ -138,10 +164,8 @@ window.renderHydrograph = function (item, rows) {
 
     columns.forEach(column => {
 
-        // No dibujar pronosticos como observaciones
         if (forecastPairs[column]) return;
 
-        // Las quebradas no tienen caudal observado
         if (column.startsWith("QD_")) return;
 
         if (
@@ -149,18 +173,12 @@ window.renderHydrograph = function (item, rows) {
             column !== "Q_CABOINGA"
         ) return;
 
-        // Ventana observada:
-        // Desde 48 horas antes del inicio y hasta donde
-        // existan datos, incluyendo observaciones posteriores.
         const observedRecords = records.filter(r =>
             r.date >= inicioObservaciones
         );
 
         if (column === "Q_CABOINGA") {
 
-            // Cabo Inga: mediciones puntuales.
-            // Se eliminan filas vacias para unir las mediciones
-            // existentes mediante una linea suavizada.
             const points = observedRecords
                 .map(r => ({
                     x: r.date,
@@ -207,8 +225,7 @@ window.renderHydrograph = function (item, rows) {
             return;
         }
 
-        // El Tigre:
-        // Conservar null para que los vacios no se conecten.
+        // El Tigre: conservar null para no conectar vacíos.
         const x = [];
         const y = [];
 
@@ -261,8 +278,7 @@ window.renderHydrograph = function (item, rows) {
 
         if (!observedColumn) return;
 
-        // Pronosticos solamente entre:
-        // 05/11/2026 02:00 y 08/11/2026 02:00
+        // El pronóstico comienza en la fecha configurada.
         const forecastRecords = records.filter(r =>
             r.date >= inicioPronostico &&
             r.date <= finPronostico
@@ -275,7 +291,7 @@ window.renderHydrograph = function (item, rows) {
 
         if (!points.some(p => p.y !== null)) {
             console.log(
-                "Sin datos de pronostico:",
+                "Sin datos de pronóstico:",
                 forecastColumn
             );
             return;
@@ -294,7 +310,7 @@ window.renderHydrograph = function (item, rows) {
 
         totalForecast += points.filter(p => p.y !== null).length;
 
-        // Limite inferior: no aparece en la leyenda
+        // Banda inferior
         traces.push({
             x,
             y: lower,
@@ -312,7 +328,7 @@ window.renderHydrograph = function (item, rows) {
             hoverinfo: "skip"
         });
 
-        // Limite superior y sombreado: no aparece en leyenda
+        // Banda superior y sombreado
         traces.push({
             x,
             y: upper,
@@ -333,7 +349,7 @@ window.renderHydrograph = function (item, rows) {
             hoverinfo: "skip"
         });
 
-        // Linea principal del pronostico
+        // Línea principal del pronóstico
         traces.push({
             x,
             y,
@@ -362,7 +378,6 @@ window.renderHydrograph = function (item, rows) {
 
     // ========================================================
     // 5. PRONOSTICOS DE LAS QUEBRADAS
-    // QD_* SON EXCLUSIVAMENTE PRONOSTICADOS
     // ========================================================
 
     columns.forEach(column => {
@@ -380,7 +395,7 @@ window.renderHydrograph = function (item, rows) {
         }));
 
         if (!points.some(p => p.y !== null)) {
-            console.log("Sin pronostico para quebrada:", column);
+            console.log("Sin pronóstico para quebrada:", column);
             return;
         }
 
@@ -436,7 +451,7 @@ window.renderHydrograph = function (item, rows) {
             hoverinfo: "skip"
         });
 
-        // Pronostico de quebrada
+        // Pronóstico de quebrada
         traces.push({
             x,
             y,
@@ -471,12 +486,10 @@ window.renderHydrograph = function (item, rows) {
         {
             type: "line",
 
-            // Posicion temporal exacta
             xref: "x",
             x0: inicioPronostico,
             x1: inicioPronostico,
 
-            // Toda la altura del grafico
             yref: "paper",
             y0: 0,
             y1: 1,
@@ -489,6 +502,17 @@ window.renderHydrograph = function (item, rows) {
         }
     ];
 
+    // Etiqueta generada automáticamente desde CONFIG.
+    const fechaEtiqueta = inicioPronostico.toLocaleString("es-PE", {
+        timeZone: "America/Lima",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+    });
+
     const annotations = [
         {
             xref: "x",
@@ -497,7 +521,7 @@ window.renderHydrograph = function (item, rows) {
             yref: "paper",
             y: 1,
 
-            text: "INICIO PRONÓSTICO<br>05/11/2026 - 02:00",
+            text: "INICIO PRONÓSTICO<br>" + fechaEtiqueta,
 
             showarrow: false,
 
@@ -588,9 +612,6 @@ window.renderHydrograph = function (item, rows) {
     // 8. EXTENSION DEL EJE TEMPORAL
     // ========================================================
 
-    // Estaciones: mostrar desde -48 h y también cualquier
-    // observacion posterior que exista.
-    // Quebradas: comenzar directamente en el inicio.
     let ejeInicio = esEstacion
         ? inicioObservaciones
         : inicioPronostico;
@@ -723,7 +744,7 @@ window.parseDate = function (value) {
     }
 
     // Fechas seriales de Excel:
-    // Se interpretan como hora local del navegador (Peru).
+    // Se interpretan como hora local del navegador (Perú).
     if (typeof value === "number") {
 
         const d = XLSX.SSF.parse_date_code(value);
@@ -749,5 +770,3 @@ window.parseDate = function (value) {
 
     return Number.isNaN(date.getTime()) ? null : date;
 };
-
-
