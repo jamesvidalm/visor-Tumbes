@@ -27,7 +27,7 @@ window.CONFIG = {
         { nombre: "Cabuyal", archivo: "cabuyal.geojson", columna: "QD_CABUYAL" },
         { nombre: "Vaquería", archivo: "vaqueria.geojson", columna: "QD_VAQUERIA" },
         { nombre: "El Tigre", archivo: "ElTigreQ.geojson", columna: "QD_ELTIGRE" },
-        { nombre: "Cabeza de Toro", archivo: "cabezadeToro.geojson", columna: "QD_CABEZADETORO" },
+        { nombre: "Cabeza de Toro", archivo: "cabezadeToro.geojson", columna: "QD_CABEZADETORO"},
         { nombre: "Jardina", archivo: "jardina.geojson", columna: "QD_JARDINA" },
         { nombre: "Higuerón", archivo: "higueron.geojson", columna: "QD_HIGUERON" },
         { nombre: "Corrales", archivo: "corrales.geojson", columna: "QD_CORRALES" },
