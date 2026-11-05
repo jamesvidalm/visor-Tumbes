@@ -19,14 +19,13 @@ window.initMap = function(points, onSelect) {
         }).addTo(map);
 
         marker.bindTooltip(p.nombre);
-        marker.bindPopup(`<b>${p.nombre}</b><br>Selecciona para ver el hidrograma.`);
         marker.on("click", () => onSelect(p));
 
         bounds.push([p.lat, p.lon]);
     });
 
     if (bounds.length) {
-        map.fitBounds(bounds, { padding: [45, 45] });
+        map.fitBounds(bounds, { padding: [40, 40] });
     }
 
     return map;
@@ -52,6 +51,7 @@ window.addPolygons = async function(map, onSelect) {
                 },
                 onEachFeature: (feature, layer) => {
                     layer.bindTooltip(q.nombre);
+
                     layer.on("click", () => {
                         onSelect({
                             nombre: q.nombre,
@@ -63,7 +63,7 @@ window.addPolygons = async function(map, onSelect) {
             }).addTo(map);
 
         } catch (error) {
-            console.error("Error cargando quebrada " + q.nombre + ":", error);
+            console.error("Error en quebrada " + q.nombre + ":", error);
         }
     }
 };
