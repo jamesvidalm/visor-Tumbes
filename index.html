@@ -5,48 +5,90 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Cuenca del río Tumbes | Visor hidrológico</title>
+<title>Cuenca del río Tumbes | Sistema de Pronóstico Hidrológico</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="css/style.css">
+
+<style>
+    /* ENCABEZADO PRINCIPAL */
+    .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 22px 4%;
+        min-height: 100px;
+    }
+
+    .brand-title {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .brand-title .eyebrow {
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 1.5px;
+        color: #60a5fa;
+    }
+
+    .brand-title h1 {
+        margin: 0;
+        font-size: clamp(24px, 3vw, 34px);
+        font-weight: 800;
+        letter-spacing: -0.8px;
+        color: #f8fafc;
+    }
+
+    @media (max-width: 600px) {
+        .topbar {
+            padding: 18px 5%;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .brand-title h1 {
+            font-size: 23px;
+        }
+
+        .status {
+            font-size: 9px;
+        }
+    }
+</style>
+
 </head>
 
 <body>
 
+<!-- ENCABEZADO PRINCIPAL -->
 <header class="topbar">
-    <div class="brand">T</div>
 
-    <div>
-        <div class="eyebrow">SISTEMA DE PRONÓSTICO HIDROLÓGICO</div>
+    <div class="brand-title">
+
+        <div class="eyebrow">
+            SISTEMA DE PRONÓSTICO HIDROLÓGICO
+        </div>
+
         <h1>Cuenca del río Tumbes</h1>
+
     </div>
 
     <div class="status">
         <i></i> PRONÓSTICO HORARIO
     </div>
+
 </header>
+
 
 <main>
 
-    <section class="intro">
-        <div>
-            <div class="eyebrow">MONITOREO Y MODELACIÓN</div>
-            <h2>Visor de caudales y quebradas</h2>
-            <p>
-                Selecciona El Tigre, Cabo Inga o cualquiera de los
-                polígonos de quebradas para consultar su hidrograma.
-            </p>
-        </div>
-
-        <div class="info">
-            <small>DATOS CARGADOS</small>
-            <strong id="data-status">Cargando…</strong>
-        </div>
-    </section>
-
     <!-- 01. AREA DE ESTUDIO -->
     <section class="panel">
+
         <div class="panel-head">
+
             <div>
                 <small>01 / ÁREA DE ESTUDIO</small>
                 <h3>Estaciones y quebradas</h3>
@@ -56,6 +98,7 @@
                 <span><b class="point"></b>Puntos</span>
                 <span><b class="polygon"></b>Quebradas</span>
             </div>
+
         </div>
 
         <div id="map"></div>
@@ -63,19 +106,25 @@
         <div class="hint">
             Haz clic en un punto o polígono para consultar el hidrograma.
         </div>
+
     </section>
+
 
     <!-- 02. HIDROGRAMA -->
     <section class="panel">
+
         <div class="panel-head">
+
             <div>
                 <small>02 / PRONÓSTICO</small>
+
                 <h3 id="hydro-title">
                     Selecciona una ubicación en el mapa
                 </h3>
             </div>
 
             <span class="unit">CAUDAL · m³/s</span>
+
         </div>
 
         <div id="hydro-subtitle" class="subinfo">
@@ -87,17 +136,21 @@
                 Selecciona El Tigre, Cabo Inga o una quebrada.
             </div>
         </div>
+
     </section>
 
+
     <!-- 03. MAPAS DE INUNDACION -->
-    <!-- Este panel se crea automaticamente desde inundaciones.js -->
+    <!-- Se generan automaticamente desde inundaciones.js -->
+
 
     <footer>
-        Visor hidrológico de la cuenca del río Tumbes ·
-        Datos horarios · Perú (UTC−5)
+        Sistema de Pronóstico Hidrológico de la cuenca del río Tumbes
+        · Datos horarios · Perú (UTC−5)
     </footer>
 
 </main>
+
 
 <!-- LIBRERIAS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -105,6 +158,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
 
 <!-- CODIGOS DEL DASHBOARD -->
 <script src="js/config.js"></script>
