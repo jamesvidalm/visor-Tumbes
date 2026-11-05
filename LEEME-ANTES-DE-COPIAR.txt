@@ -1,13 +1,1 @@
-ESTA VEZ REEMPLAZA TAMBIEN index.html.
-La captura demuestra que GitHub Pages sigue ejecutando el app.js antiguo.
-Este paquete contiene un conjunto coherente:
-- index.html carga js/config.js ANTES de js/app.js.
-- js/config.js contiene las rutas data/caudales/caudales_Tumbes.xlsx y data/ubicacion/ubicacion.xlsx.
-- js/app.js usa esas rutas configuradas.
-- Se incluyen los dos Excel que debe servir GitHub Pages.
 
-Copia TODO el contenido del ZIP dentro de la raíz de tu repositorio local visor-Tumbes.
-Acepta reemplazar index.html, css/style.css, js/config.js, js/app.js, js/hidrogramas.js, js/mapa.js y los dos Excel.
-NO borres la carpeta data/quebradas ni los GeoJSON que ya subiste.
-Luego GitHub Desktop: Commit to main y Push origin.
-Después espera a que Actions termine y abre el sitio con Ctrl+Shift+R.
