@@ -8,7 +8,7 @@ window.CONFIG = {
     hojaUbicaciones: "Ubicacion",
 
     // INICIO DEL PRONOSTICO
-    inicioPronostico:"2026-11-06T14:00:00-05:00",
+    inicioPronostico:"2026-11-07T02:00:00-05:00",
 
     // CARPETA DE MAPAS DE INUNDACION
     manifestInundaciones: "data/inundaciones/manifest.json",
