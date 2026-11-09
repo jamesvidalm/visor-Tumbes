@@ -1,7 +1,9 @@
+
 // ============================================================
-// HIDROGRAMAS - CUENCA DEL RIO TUMBES
+// HIDROGRAMAS - CUENCA DEL RÍO TUMBES
+// ============================================================
 //
-// INICIO DEL PRONOSTICO:
+// INICIO DEL PRONÓSTICO:
 // Se obtiene de CONFIG.inicioPronostico en js/config.js.
 //
 // ESTACIONES:
@@ -11,9 +13,10 @@
 // QUEBRADAS:
 // - Solo caudal pronosticado desde el inicio hasta +72 horas.
 //
-// - Banda de incertidumbre +/- 20 %
-// - Linea vertical de inicio de pronostico
-// - Umbrales: 600, 800 y 1000 m3/s
+// CARACTERÍSTICAS:
+// - Banda de incertidumbre +/- 20 %.
+// - Línea vertical de inicio de pronóstico.
+// - Umbrales: 600, 800 y 1000 m³/s.
 // ============================================================
 
 window.renderHydrograph = function (item, rows) {
@@ -54,7 +57,7 @@ window.renderHydrograph = function (item, rows) {
     }
 
     // ========================================================
-    // 1. CONFIGURACION TEMPORAL
+    // 1. CONFIGURACIÓN TEMPORAL
     // ========================================================
 
     // UNA SOLA FECHA PARA TODO EL DASHBOARD.
@@ -75,12 +78,9 @@ window.renderHydrograph = function (item, rows) {
         return;
     }
 
-    const inicioPronostico = new Date(
-        CONFIG.inicioPronostico
-    );
+    const inicioPronostico = new Date(CONFIG.inicioPronostico);
 
     if (isNaN(inicioPronostico.getTime())) {
-
         subtitle.textContent =
             "La fecha de inicio configurada no es válida.";
 
@@ -110,7 +110,7 @@ window.renderHydrograph = function (item, rows) {
     const COLOR_PRONOSTICO = "#a78bfa";
     const COLOR_BANDA = "rgba(167,139,250,0.18)";
 
-    // Correspondencia de pronostico y observado
+    // Correspondencia de pronóstico y observado
     const forecastPairs = {
         "Q_TIGRE_P": "Q_TIGRE",
         "Q_CABOINGA_P": "Q_CABOINGA"
@@ -137,15 +137,16 @@ window.renderHydrograph = function (item, rows) {
         return Number.isFinite(n) ? n : null;
     }
 
-    const records = rows.map(row => ({
-        row: row,
-        date: window.parseDate(row.fecha)
-    }))
-    .filter(r =>
-        r.date instanceof Date &&
-        !isNaN(r.date.getTime())
-    )
-    .sort((a, b) => a.date - b.date);
+    const records = rows
+        .map(row => ({
+            row: row,
+            date: window.parseDate(row.fecha)
+        }))
+        .filter(r =>
+            r.date instanceof Date &&
+            !isNaN(r.date.getTime())
+        )
+        .sort((a, b) => a.date - b.date);
 
     if (!records.length) {
         subtitle.textContent = "No se encontraron fechas válidas.";
@@ -165,7 +166,6 @@ window.renderHydrograph = function (item, rows) {
     columns.forEach(column => {
 
         if (forecastPairs[column]) return;
-
         if (column.startsWith("QD_")) return;
 
         if (
@@ -269,7 +269,7 @@ window.renderHydrograph = function (item, rows) {
     });
 
     // ========================================================
-    // 4. PRONOSTICO DE EL TIGRE Y CABO INGA
+    // 4. PRONÓSTICO DE EL TIGRE Y CABO INGA
     // ========================================================
 
     columns.forEach(forecastColumn => {
@@ -377,7 +377,7 @@ window.renderHydrograph = function (item, rows) {
     });
 
     // ========================================================
-    // 5. PRONOSTICOS DE LAS QUEBRADAS
+    // 5. PRONÓSTICOS DE LAS QUEBRADAS
     // ========================================================
 
     columns.forEach(column => {
@@ -479,7 +479,7 @@ window.renderHydrograph = function (item, rows) {
     });
 
     // ========================================================
-    // 6. LINEA VERTICAL: INICIO DEL PRONOSTICO
+    // 6. LÍNEA VERTICAL: INICIO DEL PRONÓSTICO
     // ========================================================
 
     const shapes = [
@@ -570,6 +570,7 @@ window.renderHydrograph = function (item, rows) {
 
             shapes.push({
                 type: "line",
+
                 xref: "paper",
                 x0: 0,
                 x1: 1,
@@ -609,33 +610,40 @@ window.renderHydrograph = function (item, rows) {
     }
 
     // ========================================================
-    // 8. EXTENSION DEL EJE TEMPORAL
+    // 8. EXTENSIÓN DEL EJE TEMPORAL
     // ========================================================
 
     let ejeInicio = esEstacion
         ? inicioObservaciones
         : inicioPronostico;
 
-    // Terminar el eje X en la ultima fecha que tenga un valor valido
-    // en cualquiera de las series que realmente se estan graficando.
-    const fechasValidas = traces.flatMap(t =>
-        (t.x || []).filter((fecha, i) =>
-            fecha instanceof Date &&
-            !isNaN(fecha.getTime()) &&
-            t.y &&
-            t.y[i] !== null &&
-            t.y[i] !== undefined &&
-            Number.isFinite(Number(t.y[i]))
-        )
-    );
+    let ejeFin = finPronostico;
 
-    let ejeFin = fechasValidas.length
-        ? new Date(Math.max(...fechasValidas.map(fecha => fecha.getTime())))
-        : finPronostico;
+    if (esEstacion) {
 
-    // Evitar un rango temporal invalido.
-    if (ejeFin <= ejeInicio) {
-        ejeFin = finPronostico;
+        const observacionesPosteriores = records.filter(r => {
+
+            const value = esCaboInga
+                ? getNumber(r.row, "Q_CABOINGA")
+                : getNumber(r.row, "Q_TIGRE");
+
+            return (
+                r.date >= inicioPronostico &&
+                value !== null
+            );
+        });
+
+        if (observacionesPosteriores.length) {
+
+            const ultimaObservacion =
+                observacionesPosteriores[
+                    observacionesPosteriores.length - 1
+                ].date;
+
+            if (ultimaObservacion > ejeFin) {
+                ejeFin = ultimaObservacion;
+            }
+        }
     }
 
     // Escala vertical
@@ -717,7 +725,7 @@ window.renderHydrograph = function (item, rows) {
     );
 
     // ========================================================
-    // 10. ACTUALIZAR LOS MAPAS DE INUNDACION
+    // 10. ACTUALIZAR LOS MAPAS DE INUNDACIÓN
     // ========================================================
 
     if (window.renderFloodImages) {
@@ -727,7 +735,7 @@ window.renderHydrograph = function (item, rows) {
 
 
 // ============================================================
-// CONVERSION DE FECHAS
+// CONVERSIÓN DE FECHAS
 // ============================================================
 
 window.parseDate = function (value) {
