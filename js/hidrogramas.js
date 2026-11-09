@@ -616,33 +616,26 @@ window.renderHydrograph = function (item, rows) {
         ? inicioObservaciones
         : inicioPronostico;
 
-    let ejeFin = finPronostico;
+    // Terminar el eje X en la ultima fecha que tenga un valor valido
+    // en cualquiera de las series que realmente se estan graficando.
+    const fechasValidas = traces.flatMap(t =>
+        (t.x || []).filter((fecha, i) =>
+            fecha instanceof Date &&
+            !isNaN(fecha.getTime()) &&
+            t.y &&
+            t.y[i] !== null &&
+            t.y[i] !== undefined &&
+            Number.isFinite(Number(t.y[i]))
+        )
+    );
 
-    if (esEstacion) {
+    let ejeFin = fechasValidas.length
+        ? new Date(Math.max(...fechasValidas.map(fecha => fecha.getTime())))
+        : finPronostico;
 
-        const observacionesPosteriores = records.filter(r => {
-
-            const value = esCaboInga
-                ? getNumber(r.row, "Q_CABOINGA")
-                : getNumber(r.row, "Q_TIGRE");
-
-            return (
-                r.date >= inicioPronostico &&
-                value !== null
-            );
-        });
-
-        if (observacionesPosteriores.length) {
-
-            const ultimaObservacion =
-                observacionesPosteriores[
-                    observacionesPosteriores.length - 1
-                ].date;
-
-            if (ultimaObservacion > ejeFin) {
-                ejeFin = ultimaObservacion;
-            }
-        }
+    // Evitar un rango temporal invalido.
+    if (ejeFin <= ejeInicio) {
+        ejeFin = finPronostico;
     }
 
     // Escala vertical
