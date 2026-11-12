@@ -1,18 +1,22 @@
 
 window.CONFIG = {
 
+    // ARCHIVOS HIDROLÓGICOS
     caudalesFile: "data/caudales/caudales_Tumbes.xlsx",
     ubicacionesFile: "data/ubicacion/ubicacion.xlsx",
 
     hojaCaudales: "Hoja1",
     hojaUbicaciones: "Ubicacion",
 
-    // INICIO DEL PRONOSTICO
     inicioPronostico: "2026-11-12T08:00:00-05:00",
 
-    // CARPETA DE MAPAS DE INUNDACION
+    // PRONÓSTICO DE LLUVIA GFS EN JSON
+    gfsFile: "data/rainGFS/GFS_TUMBES_20261112_12UTC.json",
+
+    // MAPAS DE INUNDACIÓN
     manifestInundaciones: "data/inundaciones/manifest.json",
 
+    // ESTACIONES
     puntos: [
         {
             id: "El Tigre",
@@ -34,6 +38,7 @@ window.CONFIG = {
         }
     ],
 
+    // CARPETA DE QUEBRADAS
     carpetaQuebradas: "data/quebradas/",
 
     quebradas: [
@@ -90,3 +95,4 @@ window.CONFIG = {
     ]
 
 };
+
