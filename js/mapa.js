@@ -2,17 +2,18 @@
  // ============================================================
  // MAPA.JS - DASHBOARD HIDROLOGICO CUENCA DEL RIO TUMBES
  // ============================================================
- // - Estaciones: El Tigre y Cabo Inga.
- // - Diez quebradas GeoJSON.
- // - Cuatro mapas base intercambiables.
- // - OpenTopoMap como mapa predeterminado.
- // - Leyenda dinámica de quebradas.
- // - Selección de polígonos para actualizar hidrogramas.
+ // - Estaciones El Tigre y Cabo Inga.
+ // - Diez polígonos de quebradas.
+ // - Diez capas de ríos GeoJSON.
+ // - Ríos en color azul, sin leyenda independiente.
+ // - OpenTopoMap como fondo predeterminado.
+ // - Selector de mapas contraído inicialmente.
+ // - Clic en polígono para actualizar hidrograma.
  // ============================================================
 
 
 // ============================================================
-// 1. COLORES DE LAS QUEBRADAS
+// 1. COLORES DE LOS POLÍGONOS
 // ============================================================
 
 const COLORES_QUEBRADAS = [
@@ -30,7 +31,40 @@ const COLORES_QUEBRADAS = [
 
 
 // ============================================================
-// 2. INICIALIZAR MAPA
+// 2. ARCHIVOS GEOJSON DE LOS RÍOS
+// ============================================================
+
+const ARCHIVOS_RIOS = {
+    "CABUYAL": "rio_cabuyal.geojson",
+    "VAQUERIA": "rio_vaqueria.geojson",
+    "EL TIGRE": "rio_tigre.geojson",
+    "CABEZA DE TORO": "rio_CabezadeToro.geojson",
+    "JARDINA": "rio_jardina.geojson",
+    "HIGUERON": "rio_higueron.geojson",
+    "CORRALES": "rio_corrales.geojson",
+    "CEIBAL": "rio_ceibal.geojson",
+    "CAZADEROS": "rio_cazaderos.geojson",
+    "OZUMARES": "rio_ozumares.geojson"
+};
+
+
+// ============================================================
+// 3. NORMALIZAR NOMBRES
+// ============================================================
+
+function normalizarNombreMapa(valor) {
+
+    return String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .trim();
+
+}
+
+
+// ============================================================
+// 4. INICIALIZAR MAPA
 // ============================================================
 
 window.initMap = function(points, onSelect) {
@@ -41,13 +75,10 @@ window.initMap = function(points, onSelect) {
 
 
     // ========================================================
-    // 2.1 MAPAS BASE
+    // 4.1 MAPAS BASE
     // ========================================================
 
     // OPEN TOPOMAP
-    // Muestra relieve, curvas de nivel y características
-    // topográficas del territorio.
-
     const openTopoMap = L.tileLayer(
         "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
         {
@@ -60,8 +91,6 @@ window.initMap = function(points, onSelect) {
 
 
     // OPEN STREET MAP
-    // Mapa convencional con carreteras y localidades.
-
     const openStreetMap = L.tileLayer(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
@@ -73,8 +102,6 @@ window.initMap = function(points, onSelect) {
 
 
     // GOOGLE SATELLITE
-    // Imagen satelital.
-
     const googleSatellite = L.tileLayer(
         "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
         {
@@ -85,8 +112,6 @@ window.initMap = function(points, onSelect) {
 
 
     // GOOGLE MAPS
-    // Mapa convencional de Google.
-
     const googleMaps = L.tileLayer(
         "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
         {
@@ -97,16 +122,14 @@ window.initMap = function(points, onSelect) {
 
 
     // ========================================================
-    // 2.2 MAPA PREDETERMINADO
+    // 4.2 FONDO PREDETERMINADO
     // ========================================================
-
-    // OPEN TOPOMAP SE CARGA AUTOMÁTICAMENTE.
 
     openTopoMap.addTo(map);
 
 
     // ========================================================
-    // 2.3 SELECTOR DE MAPAS BASE
+    // 4.3 SELECTOR DE MAPAS
     // ========================================================
 
     const mapasBase = {
@@ -127,13 +150,16 @@ window.initMap = function(points, onSelect) {
         null,
         {
             position: "topright",
-            collapsed: false
+
+            // Contraído inicialmente.
+            // Se despliega al pasar el cursor o pulsarlo.
+            collapsed: true
         }
     ).addTo(map);
 
 
     // ========================================================
-    // 2.4 MARCADORES DE ESTACIONES
+    // 4.4 MARCADORES DE ESTACIONES
     // ========================================================
 
     const bounds = [];
@@ -156,8 +182,6 @@ window.initMap = function(points, onSelect) {
         marker.bindTooltip(p.nombre);
 
 
-        // Seleccionar estación y actualizar hidrograma.
-
         marker.on("click", () => {
 
             onSelect(p);
@@ -170,10 +194,7 @@ window.initMap = function(points, onSelect) {
     });
 
 
-    // ========================================================
-    // 2.5 AJUSTAR VISTA DEL MAPA
-    // ========================================================
-
+    // Ajustar vista a las estaciones.
     if (bounds.length) {
 
         map.fitBounds(
@@ -192,14 +213,14 @@ window.initMap = function(points, onSelect) {
 
 
 // ============================================================
-// 3. AGREGAR POLÍGONOS DE LAS QUEBRADAS
+// 5. AGREGAR POLÍGONOS Y RÍOS
 // ============================================================
 
 window.addPolygons = async function(map, onSelect) {
 
 
     // ========================================================
-    // 3.1 VERIFICAR CONFIGURACIÓN
+    // 5.1 VERIFICAR CONFIGURACIÓN
     // ========================================================
 
     if (
@@ -208,20 +229,22 @@ window.addPolygons = async function(map, onSelect) {
     ) {
 
         throw new Error(
-            "No se encontró CONFIG.quebradas en data.js."
+            "No se encontró CONFIG.quebradas en config.js."
         );
 
     }
 
 
+    console.log("==================================");
+
     console.log(
-        "Quebradas configuradas:",
+        "QUEBRADAS CONFIGURADAS:",
         CONFIG.quebradas.length
     );
 
 
     // ========================================================
-    // 3.2 CREAR LEYENDA
+    // 5.2 LEYENDA: SOLO POLÍGONOS
     // ========================================================
 
     const legend = L.control({
@@ -248,8 +271,6 @@ window.addPolygons = async function(map, onSelect) {
         div.style.overflowY = "auto";
 
 
-        // Título.
-
         const title = document.createElement("div");
 
         title.textContent = "LEYENDA DE QUEBRADAS";
@@ -261,7 +282,8 @@ window.addPolygons = async function(map, onSelect) {
         div.appendChild(title);
 
 
-        // Agregar las diez quebradas automáticamente.
+        // Solo se muestran las quebradas.
+        // Los ríos NO se agregan a esta leyenda.
 
         CONFIG.quebradas.forEach((q, i) => {
 
@@ -310,11 +332,19 @@ window.addPolygons = async function(map, onSelect) {
 
 
     // ========================================================
-    // 3.3 CARGAR POLÍGONOS GEOJSON
+    // 5.3 CONTADORES
     // ========================================================
 
     const capasQuebradas = [];
+    const capasRios = [];
 
+    let erroresQuebradas = 0;
+    let erroresRios = 0;
+
+
+    // ========================================================
+    // 5.4 CARGAR CADA QUEBRADA Y SU RÍO
+    // ========================================================
 
     for (
         let i = 0;
@@ -324,49 +354,52 @@ window.addPolygons = async function(map, onSelect) {
 
         const q = CONFIG.quebradas[i];
 
+        const nombreNormalizado =
+            normalizarNombreMapa(q.nombre);
+
 
         const color = COLORES_QUEBRADAS[
             i % COLORES_QUEBRADAS.length
         ];
 
 
+        // ----------------------------------------------------
+        // A. CARGAR POLÍGONO DE QUEBRADA
+        // ----------------------------------------------------
+
         try {
 
-            // Ruta del archivo GeoJSON.
-
-            const url =
+            const urlPoligono =
                 CONFIG.carpetaQuebradas + q.archivo;
 
 
             console.log(
-                "Cargando quebrada:",
+                "Cargando polígono:",
                 q.nombre,
-                url
+                urlPoligono
             );
 
 
-            const response = await fetch(url);
+            const responsePoligono =
+                await fetch(urlPoligono);
 
 
-            if (!response.ok) {
+            if (!responsePoligono.ok) {
 
                 throw new Error(
-                    "HTTP " + response.status +
-                    ": " + url
+                    "HTTP " + responsePoligono.status +
+                    ": " + urlPoligono
                 );
 
             }
 
 
-            const geojson = await response.json();
+            const geojsonPoligono =
+                await responsePoligono.json();
 
 
-            // =================================================
-            // CREAR CAPA GEOJSON
-            // =================================================
-
-            const capa = L.geoJSON(
-                geojson,
+            const capaQuebrada = L.geoJSON(
+                geojsonPoligono,
                 {
 
                     style: {
@@ -382,15 +415,11 @@ window.addPolygons = async function(map, onSelect) {
 
                     onEachFeature: (feature, layer) => {
 
-
-                        // Nombre de la quebrada.
-
                         layer.bindTooltip(q.nombre);
 
 
-                        // =====================================
-                        // SELECCIONAR QUEBRADA
-                        // =====================================
+                        // Clic en el polígono:
+                        // actualiza el hidrograma.
 
                         layer.on("click", () => {
 
@@ -428,23 +457,129 @@ window.addPolygons = async function(map, onSelect) {
             );
 
 
-            // Agregar polígono al mapa.
+            capaQuebrada.addTo(map);
 
-            capa.addTo(map);
-
-            capasQuebradas.push(capa);
+            capasQuebradas.push(capaQuebrada);
 
 
             console.log(
-                "Quebrada cargada correctamente:",
+                "Polígono cargado:",
                 q.nombre
             );
 
 
         } catch (error) {
 
+            erroresQuebradas++;
+
             console.error(
-                "Error en quebrada " + q.nombre + ":",
+                "Error en polígono " + q.nombre + ":",
+                error
+            );
+
+        }
+
+
+        // ----------------------------------------------------
+        // B. CARGAR RÍO DE LA QUEBRADA
+        // ----------------------------------------------------
+
+        try {
+
+            const archivoRio =
+                ARCHIVOS_RIOS[nombreNormalizado];
+
+
+            if (!archivoRio) {
+
+                throw new Error(
+                    "No se configuró el archivo del río para " +
+                    q.nombre
+                );
+
+            }
+
+
+            const urlRio =
+                CONFIG.carpetaQuebradas + archivoRio;
+
+
+            console.log(
+                "Cargando río:",
+                q.nombre,
+                urlRio
+            );
+
+
+            const responseRio = await fetch(urlRio);
+
+
+            if (!responseRio.ok) {
+
+                throw new Error(
+                    "HTTP " + responseRio.status +
+                    ": " + urlRio
+                );
+
+            }
+
+
+            const geojsonRio = await responseRio.json();
+
+
+            // ------------------------------------------------
+            // ESTILO DE RÍOS
+            // ------------------------------------------------
+
+            const capaRio = L.geoJSON(
+                geojsonRio,
+                {
+
+                    style: {
+
+                        // Color azul para todos los ríos.
+                        color: "#168BDB",
+
+                        weight: 2.5,
+
+                        opacity: 0.95,
+
+                        lineCap: "round",
+
+                        lineJoin: "round"
+
+                    },
+
+
+                    // Los ríos no capturan clics.
+                    // Así los polígonos siguen siendo seleccionables.
+
+                    interactive: false,
+
+                    bubblingMouseEvents: false
+
+                }
+            );
+
+
+            capaRio.addTo(map);
+
+            capasRios.push(capaRio);
+
+
+            console.log(
+                "Río cargado correctamente:",
+                q.nombre,
+                archivoRio
+            );
+
+
+        } catch (error) {
+
+            erroresRios++;
+
+            console.error(
+                "Error cargando río de " + q.nombre + ":",
                 error
             );
 
@@ -454,9 +589,10 @@ window.addPolygons = async function(map, onSelect) {
 
 
     // ========================================================
-    // 3.4 RESUMEN DE CARGA
+    // 5.5 RESUMEN DE CARGA
     // ========================================================
 
+    console.log("");
     console.log("==================================");
 
     console.log(
@@ -465,25 +601,40 @@ window.addPolygons = async function(map, onSelect) {
     );
 
     console.log(
-        "QUEBRADAS CARGADAS:",
+        "POLÍGONOS CARGADOS:",
         capasQuebradas.length
+    );
+
+    console.log(
+        "RÍOS CARGADOS:",
+        capasRios.length
+    );
+
+    console.log(
+        "ERRORES EN POLÍGONOS:",
+        erroresQuebradas
+    );
+
+    console.log(
+        "ERRORES EN RÍOS:",
+        erroresRios
     );
 
 
     if (
-        capasQuebradas.length !==
-        CONFIG.quebradas.length
+        capasQuebradas.length === CONFIG.quebradas.length &&
+        capasRios.length === CONFIG.quebradas.length
     ) {
 
-        console.warn(
-            "Algunas quebradas no pudieron cargarse. " +
-            "Revisa las rutas de los archivos GeoJSON."
+        console.log(
+            "TODAS LAS QUEBRADAS Y SUS RÍOS SE CARGARON CORRECTAMENTE."
         );
 
     } else {
 
-        console.log(
-            "Todas las quebradas se cargaron correctamente."
+        console.warn(
+            "Hay archivos que no pudieron cargarse. " +
+            "Revisa las rutas y nombres en GitHub."
         );
 
     }
@@ -492,6 +643,10 @@ window.addPolygons = async function(map, onSelect) {
     console.log("==================================");
 
 
-    return capasQuebradas;
+    // Retornar las capas cargadas.
+    return {
+        quebradas: capasQuebradas,
+        rios: capasRios
+    };
 
 };
