@@ -1,36 +1,44 @@
 
 <!doctype html>
 <html lang="es">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Cuenca del río Tumbes | Sistema de Pronóstico Hidrológico</title>
+    <title>Sistema de Pronóstico Hidrológico | Cuenca del río Tumbes</title>
 
-<link rel="stylesheet"
-href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
-<link rel="stylesheet" href="css/style.css">
-
+    <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
 <!-- =================================================
-     ENCABEZADO
-================================================= -->
+     ENCABEZADO PRINCIPAL
+================================================== -->
 
 <header class="topbar">
 
     <div class="brand-title">
 
-        <div class="eyebrow">
-            SISTEMA DE PRONÓSTICO HIDROLÓGICO
-        </div>
+        <h1>
+            Sistema de Pronóstico Hidrológico de la Cuenca del Río Tumbes
+        </h1>
 
-        <h1>Cuenca del río Tumbes</h1>
+        <p class="header-description">
+            Sistema de monitoreo y pronóstico hidrológico que integra
+            el modelo hidrológico <strong>RRI (Rainfall-Runoff-Inundation)</strong>
+            y las simulaciones hidráulicas de <strong>HEC-RAS</strong>
+            para visualizar la evolución de los caudales pronosticados,
+            monitorear las quebradas y evaluar escenarios de inundación
+            bajo diferentes condiciones hidrológicas.
+        </p>
 
     </div>
+
 
     <div class="header-right">
 
@@ -48,25 +56,6 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 
 <main>
-
-    <!-- =================================================
-         DESCRIPCIÓN
-    ================================================== -->
-
-    <section class="system-description">
-
-        <p>
-            Sistema de monitoreo y pronóstico hidrológico de la cuenca
-            del río Tumbes. Integra el modelo hidrológico
-            <strong>RRI (Rainfall-Runoff-Inundation)</strong> y las
-            simulaciones hidráulicas de <strong>HEC-RAS</strong> para
-            visualizar la evolución de los caudales pronosticados y
-            analizar escenarios de inundación bajo diferentes
-            condiciones hidrológicas.
-        </p>
-
-    </section>
-
 
     <!-- =================================================
          PRIMERA PARTE:
@@ -157,11 +146,8 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
          GENERACIÓN DINÁMICA POR inundaciones.js
     ================================================== -->
 
-    <!-- IMPORTANTE:
-         Se mantiene el espacio original de generación dinámica.
-         No se introduce un contenedor nuevo que pueda interferir
-         con el funcionamiento de inundaciones.js.
-    -->
+    <!-- No modificar: inundaciones.js genera esta sección
+         automáticamente después de monitoring-layout. -->
 
 
     <!-- =================================================
