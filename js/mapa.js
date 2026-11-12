@@ -1,19 +1,16 @@
 
-// ============================================================
-// MAPA.JS - SISTEMA HIDROLOGICO TUMBES
-// ============================================================
-// - Mantiene estaciones hidrometricas.
-// - Mantiene las 10 quebradas GeoJSON.
-// - Precipitacion GFS como RASTER.
-// - Animacion horaria PLAY / PAUSE / STOP.
-// - Deslizador para seleccionar la hora.
-// - Minimo y maximo automaticos del JSON.
-// - Fecha inicial y final automaticas.
-// - Leyenda dinamica de 10 intervalos.
-// - Actualizacion al reemplazar el archivo JSON.
-// - Sin representar la lluvia mediante puntos.
-// - Sin interpolacion.
-// ============================================================
+ // ============================================================
+ // MAPA.JS - SISTEMA HIDROLOGICO TUMBES
+ // ============================================================
+ // - Estaciones hidrometricas con seleccion de hidrogramas.
+ // - Diez subcuencas con colores independientes.
+ // - Precipitacion GFS como raster georreferenciado.
+ // - Escala de precipitacion de 20 intervalos.
+ // - Leyenda horizontal inferior.
+ // - Play / Pause / Stop compacto arriba a la derecha.
+ // - Interruptor para activar/desactivar precipitacion.
+ // - Fechas, minimo y maximo automaticos del JSON.
+ // ============================================================
 
 
 // ============================================================
@@ -33,28 +30,59 @@ window.rasterGFS = null;
 window.leyendaGFS = null;
 window.timerGFS = null;
 window.reproduciendoGFS = false;
+window.lluviaGFSVisible = true;
 
 window.intervalosGFS = [];
 
 window.resumenGFS = {
     minimo: null,
     maximo: null,
+    minimoPositivo: null,
     fechaInicio: null,
     fechaFin: null,
     totalHoras: 0
 };
 
+
+// Colores de lluvia inspirados en la imagen proporcionada
+// Azul oscuro -> celeste -> verde -> amarillo -> naranja -> rojo -> magenta
+
 window.coloresGFS = [
-    "#313695",
-    "#4575b4",
-    "#74add1",
-    "#abd9e9",
-    "#e0f3f8",
-    "#ffffbf",
-    "#fee090",
-    "#fdae61",
-    "#f46d43",
-    "#d73027"
+    "#142b8c",
+    "#174bb5",
+    "#176bd0",
+    "#168de0",
+    "#25b9e8",
+    "#38d6db",
+    "#20c997",
+    "#16b85b",
+    "#38c92d",
+    "#7bd51b",
+    "#b6df12",
+    "#e8e51a",
+    "#ffd21a",
+    "#ffad16",
+    "#ff8618",
+    "#ff5b1b",
+    "#f52b19",
+    "#df101e",
+    "#bd075d",
+    "#ed00bd"
+];
+
+
+// Colores independientes para las diez subcuencas
+window.coloresQuebradas = [
+    "#e63946",
+    "#00b4d8",
+    "#f4a261",
+    "#9b5de5",
+    "#2a9d8f",
+    "#f15bb5",
+    "#d4a017",
+    "#4361ee",
+    "#84a98c",
+    "#e76f51"
 ];
 
 
@@ -74,13 +102,11 @@ window.initMap = function(points, select) {
         throw new Error("Leaflet no esta cargado.");
     }
 
-    // Detener animacion anterior
     if (window.timerGFS) {
         clearInterval(window.timerGFS);
         window.timerGFS = null;
     }
 
-    // Eliminar mapa anterior
     if (window.mapaTumbes) {
         window.mapaTumbes.remove();
         window.mapaTumbes = null;
@@ -91,8 +117,8 @@ window.initMap = function(points, select) {
     window.leyendaGFS = null;
     window.horaGFS = 0;
     window.reproduciendoGFS = false;
+    window.lluviaGFSVisible = true;
 
-    // Crear mapa
     const map = L.map("map", {
         center: [-3.75, -80.45],
         zoom: 9,
@@ -101,7 +127,7 @@ window.initMap = function(points, select) {
 
     window.mapaTumbes = map;
 
-    // Mapa base original
+    // Mapa base
     L.tileLayer(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
@@ -110,7 +136,7 @@ window.initMap = function(points, select) {
         }
     ).addTo(map);
 
-    // Crear capas
+    // Capas
     window.capaEstaciones = L.layerGroup().addTo(map);
     window.capaQuebradas = L.layerGroup().addTo(map);
     window.capaGFS = L.layerGroup().addTo(map);
@@ -147,22 +173,24 @@ window.initMap = function(points, select) {
 
     });
 
-    // Control de capas
+    // Control de capas existentes
     L.control.layers(
         null,
         {
             "Estaciones": window.capaEstaciones,
-            "Quebradas": window.capaQuebradas,
-            "Precipitacion GFS": window.capaGFS
+            "Subcuencas": window.capaQuebradas
         },
         {
             collapsed: true,
-            position: "topright"
+            position: "topleft"
         }
     ).addTo(map);
 
-    // Control de animacion
+    // Controles compactos de lluvia
     crearControlHorarioGFS(map);
+
+    // Leyenda horizontal inferior
+    crearLeyendaGFS(map);
 
     setTimeout(function() {
         map.invalidateSize();
@@ -175,7 +203,7 @@ window.initMap = function(points, select) {
 
 
 // ============================================================
-// 2. CARGAR QUEBRADAS GEOJSON
+// 2. CARGAR SUBCUENCAS GEOJSON
 // ============================================================
 
 window.addPolygons = async function(map, select) {
@@ -188,7 +216,7 @@ window.addPolygons = async function(map, select) {
 
     const resultados = await Promise.allSettled(
 
-        lista.map(async q => {
+        lista.map(async (q, i) => {
 
             const ruta = CONFIG.carpetaQuebradas + q.archivo;
 
@@ -203,14 +231,18 @@ window.addPolygons = async function(map, select) {
 
             const geojson = await response.json();
 
+            const color = window.coloresQuebradas[
+                i % window.coloresQuebradas.length
+            ];
+
             const layer = L.geoJSON(geojson, {
 
                 style: {
-                    color: "#a78bfa",
+                    color: color,
                     weight: 2,
-                    opacity: 0.9,
-                    fillColor: "#a78bfa",
-                    fillOpacity: 0.10
+                    opacity: 1,
+                    fillColor: color,
+                    fillOpacity: 0.32
                 },
 
                 onEachFeature: function(feature, lyr) {
@@ -218,7 +250,7 @@ window.addPolygons = async function(map, select) {
                     lyr.bindTooltip(q.nombre);
 
                     lyr.bindPopup(
-                        "<b>Quebrada " + q.nombre + "</b>"
+                        "<b>Subcuenca " + q.nombre + "</b>"
                     );
 
                     lyr.on("click", function() {
@@ -227,7 +259,9 @@ window.addPolygons = async function(map, select) {
                             id: q.nombre,
                             nombre: q.nombre,
                             columna: q.columna,
-                            columnas: [q.columna]
+                            columnas: [q.columna],
+                            etiquetas: [q.nombre],
+                            tipo: "quebrada"
                         });
 
                     });
@@ -238,7 +272,12 @@ window.addPolygons = async function(map, select) {
 
             layer.addTo(window.capaQuebradas);
 
-            console.log("Quebrada cargada:", q.nombre);
+            console.log(
+                "Subcuenca cargada:",
+                q.nombre,
+                "| Color:",
+                color
+            );
 
             return q.nombre;
 
@@ -251,7 +290,7 @@ window.addPolygons = async function(map, select) {
         if (r.status === "rejected") {
 
             console.error(
-                "Error cargando quebrada:",
+                "Error cargando subcuenca:",
                 lista[i].nombre,
                 r.reason
             );
@@ -264,13 +303,15 @@ window.addPolygons = async function(map, select) {
 
 
 // ============================================================
-// 3. CALCULAR MINIMO, MAXIMO Y FECHAS DEL JSON
+// 3. CALCULAR MINIMO Y MAXIMO DEL JSON
 // ============================================================
 
 function calcularResumenGFS(data) {
 
     let minimo = Infinity;
     let maximo = -Infinity;
+    let minimoPositivo = Infinity;
+
     let cantidad = 0;
 
     data.points.forEach(p => {
@@ -290,6 +331,10 @@ function calcularResumenGFS(data) {
             minimo = Math.min(minimo, lluvia);
             maximo = Math.max(maximo, lluvia);
 
+            if (lluvia > 0) {
+                minimoPositivo = Math.min(minimoPositivo, lluvia);
+            }
+
             cantidad++;
 
         });
@@ -298,7 +343,7 @@ function calcularResumenGFS(data) {
 
     if (cantidad === 0) {
         throw new Error(
-            "El JSON GFS no contiene valores validos de precipitacion."
+            "El JSON no contiene valores validos de precipitacion."
         );
     }
 
@@ -307,10 +352,11 @@ function calcularResumenGFS(data) {
         minimo: minimo,
         maximo: maximo,
 
+        minimoPositivo:
+            minimoPositivo === Infinity ? null : minimoPositivo,
+
         fechaInicio: data.time[0],
-
         fechaFin: data.time[data.time.length - 1],
-
         totalHoras: data.time.length
 
     };
@@ -318,55 +364,44 @@ function calcularResumenGFS(data) {
     console.log("======================================");
     console.log("RESUMEN DEL PRONOSTICO GFS");
     console.log("======================================");
-    console.log("Precipitacion minima:", minimo, "mm/h");
-    console.log("Precipitacion maxima:", maximo, "mm/h");
-    console.log("Fecha inicial:", data.time[0]);
-    console.log("Fecha final:", data.time[data.time.length - 1]);
-    console.log("Total de horas:", data.time.length);
-    console.log("Valores validos:", cantidad);
+    console.log("Minimo:", minimo, "mm/h");
+    console.log("Maximo:", maximo, "mm/h");
+    console.log("Minimo positivo:", window.resumenGFS.minimoPositivo);
+    console.log("Inicio:", data.time[0]);
+    console.log("Fin:", data.time[data.time.length - 1]);
+    console.log("Horas:", data.time.length);
+    console.log("Celdas:", data.points.length);
     console.log("======================================");
 
 }
 
 
 // ============================================================
-// 4. CALCULAR 10 INTERVALOS DINAMICOS
+// 4. CALCULAR 20 INTERVALOS DE LLUVIA
 // ============================================================
 
 function calcularIntervalosGFS() {
 
-    const minimo = window.resumenGFS.minimo;
     const maximo = window.resumenGFS.maximo;
+    const minimoPositivo = window.resumenGFS.minimoPositivo;
 
     window.intervalosGFS = [];
 
-    // Si todos los valores son iguales
-    if (maximo === minimo) {
-
-        if (maximo <= 0) {
-            return;
-        }
-
-        window.intervalosGFS.push({
-
-            minimo: minimo,
-            maximo: maximo,
-            color: window.coloresGFS[0]
-
-        });
-
+    // No hay lluvia positiva
+    if (maximo <= 0 || minimoPositivo === null) {
         return;
     }
 
-    const paso = (maximo - minimo) / 10;
+    // La escala empieza en cero para facilitar la lectura
+    const minimoEscala = 0;
+    const paso = (maximo - minimoEscala) / 20;
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
 
         window.intervalosGFS.push({
 
-            minimo: minimo + i * paso,
-
-            maximo: minimo + (i + 1) * paso,
+            minimo: i * paso,
+            maximo: (i + 1) * paso,
 
             color: window.coloresGFS[i]
 
@@ -378,7 +413,7 @@ function calcularIntervalosGFS() {
 
 
 // ============================================================
-// 5. OBTENER COLOR SEGUN PRECIPITACION
+// 5. OBTENER COLOR DE PRECIPITACION
 // ============================================================
 
 window.colorPrecipitacion = function(valor) {
@@ -397,194 +432,187 @@ window.colorPrecipitacion = function(valor) {
 
     for (let i = 0; i < intervalos.length; i++) {
 
-        const intervalo = intervalos[i];
+        const item = intervalos[i];
 
         if (
-            lluvia >= intervalo.minimo &&
+            lluvia >= item.minimo &&
             (
-                lluvia < intervalo.maximo ||
+                lluvia < item.maximo ||
                 i === intervalos.length - 1
             )
         ) {
-            return intervalo.color;
+            return item.color;
         }
 
     }
 
-    // Caso en que minimo y maximo son iguales
-    if (
-        window.resumenGFS.minimo ===
-        window.resumenGFS.maximo
-    ) {
-        return window.coloresGFS[0];
-    }
-
-    return window.coloresGFS[9];
+    return window.coloresGFS[19];
 
 };
 
 
 // ============================================================
-// 6. CREAR LEYENDA DE PRECIPITACION
+// 6. LEYENDA HORIZONTAL INFERIOR
 // ============================================================
 
-function crearLeyendaGFS() {
+function crearLeyendaGFS(map) {
 
     const legend = L.control({
-        position: "bottomright"
+        position: "bottomleft"
     });
 
     legend.onAdd = function() {
 
         const div = L.DomUtil.create(
             "div",
-            "gfs-legend"
+            "gfs-horizontal-legend"
         );
 
-        div.id = "gfs-legend-content";
+        div.id = "gfs-horizontal-legend";
 
-        div.style.background = "rgba(10,19,34,0.96)";
-        div.style.padding = "11px 13px";
-        div.style.borderRadius = "8px";
+        div.style.background = "rgba(10,19,34,0.94)";
         div.style.color = "#ffffff";
-        div.style.fontSize = "11px";
-        div.style.lineHeight = "19px";
-        div.style.border = "1px solid #334155";
-        div.style.minWidth = "165px";
+        div.style.padding = "8px 12px";
+        div.style.borderRadius = "7px";
+        div.style.border = "1px solid #475569";
+        div.style.width = "min(570px, 72vw)";
+        div.style.boxSizing = "border-box";
+        div.style.fontSize = "10px";
 
         L.DomEvent.disableClickPropagation(div);
 
+        L.DomEvent.disableScrollPropagation(div);
+
         return div;
+
     };
 
-    return legend;
+    legend.addTo(map);
+
+    window.leyendaGFS = legend;
+
+    actualizarLeyendaGFS();
 
 }
 
 
 // ============================================================
-// 7. ACTUALIZAR LEYENDA DINAMICA
+// 7. ACTUALIZAR LEYENDA
 // ============================================================
 
 function actualizarLeyendaGFS() {
 
     const div = document.getElementById(
-        "gfs-legend-content"
+        "gfs-horizontal-legend"
     );
 
     if (!div) return;
 
     const r = window.resumenGFS;
-    const intervalos = window.intervalosGFS;
+
+    if (r.maximo === null) {
+
+        div.innerHTML = `
+            <div style="font-weight:bold;color:#93c5fd">
+                PRECIPITACION GFS (mm/h)
+            </div>
+            <div>Esperando datos...</div>
+        `;
+
+        return;
+    }
 
     let html = `
-        <div style="
-            font-weight:bold;
-            color:#93c5fd;
-            font-size:12px;
-            margin-bottom:8px;
-        ">
-            PRECIPITACION GFS
-        </div>
-
-        <div style="margin-bottom:8px">
-            <div style="color:#cbd5e1">
-                Minimo: <b>${r.minimo.toFixed(3)} mm/h</b>
-            </div>
-
-            <div style="color:#cbd5e1">
-                Maximo: <b>${r.maximo.toFixed(3)} mm/h</b>
-            </div>
-        </div>
 
         <div style="
-            border-top:1px solid #475569;
-            padding-top:7px;
-            margin-bottom:5px;
-            color:#93c5fd;
-            font-weight:bold;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:8px;
+            margin-bottom:7px;
         ">
-            INTERVALOS (mm/h)
+
+            <strong style="font-size:11px;color:#93c5fd">
+                PRECIPITACION GFS (mm/h)
+            </strong>
+
+            <span style="color:#cbd5e1">
+                Min: ${r.minimo.toFixed(2)}
+                &nbsp; | &nbsp;
+                Max: ${r.maximo.toFixed(2)}
+            </span>
+
         </div>
+
     `;
 
     if (r.maximo <= 0) {
 
         html += `
-            <div style="color:#cbd5e1">
-                Sin precipitacion
+            <div style="font-size:10px;color:#cbd5e1">
+                Sin precipitacion en el pronostico
             </div>
         `;
 
     } else {
 
-        intervalos.forEach((item, i) => {
+        // Barra de 20 intervalos horizontales
+        html += `
+            <div style="
+                display:grid;
+                grid-template-columns:repeat(20, minmax(0, 1fr));
+                gap:2px;
+                height:13px;
+                width:100%;
+            ">
+        `;
 
-            let etiqueta;
-
-            if (intervalos.length === 1) {
-
-                etiqueta = item.minimo.toFixed(3);
-
-            } else {
-
-                etiqueta =
-                    item.minimo.toFixed(3) +
-                    " - " +
-                    item.maximo.toFixed(3);
-
-            }
+        window.coloresGFS.forEach(color => {
 
             html += `
                 <div style="
-                    display:flex;
-                    align-items:center;
-                    gap:7px;
-                ">
-
-                    <span style="
-                        width:16px;
-                        height:12px;
-                        background:${item.color};
-                        border:1px solid rgba(255,255,255,0.5);
-                        display:inline-block;
-                        flex-shrink:0;
-                    "></span>
-
-                    <span>${etiqueta}</span>
-
-                </div>
+                    background:${color};
+                    border:1px solid rgba(255,255,255,0.24);
+                    border-radius:1px;
+                "></div>
             `;
 
         });
+
+        html += `</div>`;
+
+        html += `
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                font-size:9px;
+                color:#e2e8f0;
+                margin-top:4px;
+            ">
+                <span>0</span>
+                <span>${(r.maximo * 0.25).toFixed(2)}</span>
+                <span>${(r.maximo * 0.50).toFixed(2)}</span>
+                <span>${(r.maximo * 0.75).toFixed(2)}</span>
+                <span>${r.maximo.toFixed(2)}</span>
+            </div>
+        `;
 
     }
 
     html += `
         <div style="
+            display:flex;
+            justify-content:space-between;
+            gap:8px;
+            margin-top:7px;
+            padding-top:6px;
             border-top:1px solid #475569;
-            margin-top:8px;
-            padding-top:7px;
-            font-size:10px;
             color:#cbd5e1;
+            font-size:9px;
         ">
-
-            <div>
-                Inicio: ${String(r.fechaInicio).replace("T", " ")}
-            </div>
-
-            <div>
-                Fin: ${String(r.fechaFin).replace("T", " ")}
-            </div>
-
-            <div>
-                Duracion: ${r.totalHoras} horas
-            </div>
-
-            <div style="margin-top:4px;color:#94a3b8">
-                GFS | UTC-5
-            </div>
-
+            <span>Inicio: ${String(r.fechaInicio).replace("T", " ")}</span>
+            <span>Fin: ${String(r.fechaFin).replace("T", " ")}</span>
+            <span>${r.totalHoras} horas</span>
         </div>
     `;
 
@@ -594,45 +622,72 @@ function actualizarLeyendaGFS() {
 
 
 // ============================================================
-// 8. CREAR CONTROL PLAY / PAUSE / STOP
+// 8. CONTROL COMPACTO ARRIBA A LA DERECHA
 // ============================================================
 
 function crearControlHorarioGFS(map) {
 
     const control = L.control({
-        position: "topleft"
+        position: "topright"
     });
 
     control.onAdd = function() {
 
         const div = L.DomUtil.create(
             "div",
-            "gfs-time-control"
+            "gfs-compact-control"
         );
 
-        div.style.background = "rgba(10,19,34,0.96)";
-        div.style.padding = "11px";
-        div.style.borderRadius = "8px";
+        div.style.background = "rgba(10,19,34,0.94)";
+        div.style.padding = "8px 9px";
+        div.style.borderRadius = "7px";
         div.style.color = "#ffffff";
-        div.style.border = "1px solid #334155";
-        div.style.width = "270px";
+        div.style.border = "1px solid #475569";
+        div.style.width = "205px";
         div.style.boxSizing = "border-box";
 
         div.innerHTML = `
 
             <div style="
-                font-size:12px;
-                font-weight:bold;
-                color:#93c5fd;
-                margin-bottom:9px;
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                margin-bottom:6px;
             ">
-                PRONOSTICO DE LLUVIA GFS
+
+                <strong style="
+                    font-size:10px;
+                    color:#93c5fd;
+                ">
+                    PRONOSTICO GFS
+                </strong>
+
+                <label style="
+                    display:flex;
+                    align-items:center;
+                    gap:4px;
+                    font-size:9px;
+                    cursor:pointer;
+                ">
+
+                    <input
+                        type="checkbox"
+                        id="gfs-visible"
+                        checked
+                        style="accent-color:#22c55e"
+                    >
+
+                    Lluvia
+
+                </label>
+
             </div>
 
             <div id="gfs-hour-label" style="
-                font-size:11px;
-                color:#ffffff;
-                margin-bottom:8px;
+                font-size:10px;
+                color:#e2e8f0;
+                margin-bottom:5px;
+                text-align:center;
             ">
                 Esperando datos...
             </div>
@@ -647,15 +702,15 @@ function crearControlHorarioGFS(map) {
                 disabled
                 style="
                     width:100%;
-                    margin:5px 0 10px 0;
-                    cursor:pointer;
+                    margin:2px 0 6px 0;
                     accent-color:#38bdf8;
+                    cursor:pointer;
                 "
             >
 
             <div style="
                 display:flex;
-                gap:6px;
+                gap:5px;
                 justify-content:center;
             ">
 
@@ -663,58 +718,41 @@ function crearControlHorarioGFS(map) {
                     background:#15803d;
                     color:white;
                     border:0;
-                    padding:7px 13px;
-                    border-radius:5px;
+                    padding:5px 9px;
+                    border-radius:4px;
                     cursor:pointer;
-                    font-size:11px;
-                    font-weight:bold;
-                ">▶ Play</button>
+                    font-size:10px;
+                ">▶</button>
 
                 <button id="gfs-pause" disabled style="
                     background:#b45309;
                     color:white;
                     border:0;
-                    padding:7px 13px;
-                    border-radius:5px;
+                    padding:5px 9px;
+                    border-radius:4px;
                     cursor:pointer;
-                    font-size:11px;
-                    font-weight:bold;
-                ">Ⅱ Pause</button>
+                    font-size:10px;
+                ">Ⅱ</button>
 
                 <button id="gfs-stop" disabled style="
                     background:#b91c1c;
                     color:white;
                     border:0;
-                    padding:7px 13px;
-                    border-radius:5px;
+                    padding:5px 9px;
+                    border-radius:4px;
                     cursor:pointer;
-                    font-size:11px;
-                    font-weight:bold;
-                ">■ Stop</button>
+                    font-size:10px;
+                ">■</button>
 
             </div>
 
             <div id="gfs-step-label" style="
-                font-size:10px;
+                font-size:9px;
                 text-align:center;
                 color:#94a3b8;
-                margin-top:8px;
+                margin-top:5px;
             ">
                 Sin datos
-            </div>
-
-            <div id="gfs-summary-control" style="
-                border-top:1px solid #475569;
-                margin-top:9px;
-                padding-top:7px;
-                font-size:10px;
-                line-height:17px;
-                color:#cbd5e1;
-            ">
-                Minimo: -- mm/h<br>
-                Maximo: -- mm/h<br>
-                Inicio: --<br>
-                Fin: --
             </div>
 
         `;
@@ -723,15 +761,17 @@ function crearControlHorarioGFS(map) {
         L.DomEvent.disableScrollPropagation(div);
 
         return div;
+
     };
 
     control.addTo(map);
 
-    // Eventos de botones y deslizador
     const play = document.getElementById("gfs-play");
     const pause = document.getElementById("gfs-pause");
     const stop = document.getElementById("gfs-stop");
+
     const slider = document.getElementById("gfs-hour-slider");
+    const visible = document.getElementById("gfs-visible");
 
     play.addEventListener("click", reproducirGFS);
     pause.addEventListener("click", pausarGFS);
@@ -747,54 +787,44 @@ function crearControlHorarioGFS(map) {
 
     });
 
-}
+    // Activar y desactivar lluvia
+    visible.addEventListener("change", function() {
 
+        window.lluviaGFSVisible = this.checked;
 
-// ============================================================
-// 9. ACTUALIZAR RESUMEN DEL CONTROL
-// ============================================================
+        if (window.lluviaGFSVisible) {
 
-function actualizarResumenControlGFS() {
+            if (window.rasterGFS && window.capaGFS) {
+                window.rasterGFS.addTo(window.capaGFS);
+            }
 
-    const div = document.getElementById(
-        "gfs-summary-control"
-    );
+        } else {
 
-    if (!div || !window.datosGFS) return;
+            if (window.capaGFS) {
+                window.capaGFS.clearLayers();
+            }
 
-    const r = window.resumenGFS;
+        }
 
-    div.innerHTML = `
-
-        <div>Minimo: <b>${r.minimo.toFixed(3)} mm/h</b></div>
-
-        <div>Maximo: <b>${r.maximo.toFixed(3)} mm/h</b></div>
-
-        <div>Inicio: ${String(r.fechaInicio).replace("T", " ")}</div>
-
-        <div>Fin: ${String(r.fechaFin).replace("T", " ")}</div>
-
-    `;
+    });
 
 }
 
 
 // ============================================================
-// 10. ACTUALIZAR CONTROL HORARIO
+// 9. ACTUALIZAR CONTROLES
 // ============================================================
 
 function actualizarControlHorarioGFS() {
 
     if (!window.datosGFS) return;
 
-    const slider = document.getElementById(
-        "gfs-hour-slider"
-    );
-
+    const slider = document.getElementById("gfs-hour-slider");
     const play = document.getElementById("gfs-play");
     const pause = document.getElementById("gfs-pause");
     const stop = document.getElementById("gfs-stop");
-    const stepLabel = document.getElementById("gfs-step-label");
+    const label = document.getElementById("gfs-hour-label");
+    const step = document.getElementById("gfs-step-label");
 
     const total = window.datosGFS.time.length;
 
@@ -814,21 +844,27 @@ function actualizarControlHorarioGFS() {
 
     });
 
-    if (stepLabel) {
+    if (label) {
 
-        stepLabel.textContent =
-            "Hora " + (window.horaGFS + 1) +
-            " de " + total;
+        label.textContent =
+            String(window.datosGFS.time[window.horaGFS])
+            .replace("T", " ");
 
     }
 
-    actualizarResumenControlGFS();
+    if (step) {
+
+        step.textContent =
+            "Hora " + (window.horaGFS + 1) +
+            " / " + total;
+
+    }
 
 }
 
 
 // ============================================================
-// 11. PLAY
+// 10. PLAY
 // ============================================================
 
 function reproducirGFS() {
@@ -839,7 +875,6 @@ function reproducirGFS() {
 
     const total = window.datosGFS.time.length;
 
-    // Reiniciar si llego al final
     if (window.horaGFS >= total - 1) {
 
         window.horaGFS = 0;
@@ -874,7 +909,7 @@ function reproducirGFS() {
 
 
 // ============================================================
-// 12. PAUSE
+// 11. PAUSE
 // ============================================================
 
 function pausarGFS() {
@@ -893,7 +928,7 @@ function pausarGFS() {
 
 
 // ============================================================
-// 13. STOP
+// 12. STOP
 // ============================================================
 
 function detenerGFS() {
@@ -903,16 +938,14 @@ function detenerGFS() {
     window.horaGFS = 0;
 
     if (window.datosGFS) {
-
         window.renderGFS();
-
     }
 
 }
 
 
 // ============================================================
-// 14. CARGAR JSON GFS
+// 13. CARGAR JSON GFS
 // ============================================================
 
 window.loadGFS = async function() {
@@ -938,7 +971,6 @@ window.loadGFS = async function() {
 
         const data = await response.json();
 
-        // Validar estructura general
         if (
             !Array.isArray(data.time) ||
             !Array.isArray(data.points)
@@ -958,7 +990,6 @@ window.loadGFS = async function() {
 
         }
 
-        // Validar fechas
         data.time.forEach((fecha, i) => {
 
             if (
@@ -967,14 +998,13 @@ window.loadGFS = async function() {
             ) {
 
                 throw new Error(
-                    "Fecha incorrecta en la posicion " + i
+                    "Fecha incorrecta en posicion " + i
                 );
 
             }
 
         });
 
-        // Validar puntos y precipitaciones
         data.points.forEach(p => {
 
             if (
@@ -985,40 +1015,35 @@ window.loadGFS = async function() {
             ) {
 
                 throw new Error(
-                    "Registro GFS con estructura incorrecta: " + p.id
+                    "Registro GFS incorrecto: " + p.id
                 );
 
             }
 
         });
 
-        // Detener animacion anterior
         pausarGFS();
 
-        // Guardar datos nuevos
         window.datosGFS = data;
-
         window.horaGFS = 0;
 
-        // Calcular estadisticas globales del nuevo JSON
+        // Resumen automatico
         calcularResumenGFS(data);
 
-        // Calcular intervalos de la leyenda
+        // Escala de 20 intervalos
         calcularIntervalosGFS();
 
-        // Crear leyenda
-        if (!window.leyendaGFS) {
-
-            window.leyendaGFS = crearLeyendaGFS();
-
-            window.leyendaGFS.addTo(window.mapaTumbes);
-
-        }
-
-        // Actualizar leyenda y controles
+        // Actualizar leyenda
         actualizarLeyendaGFS();
 
-        actualizarControlHorarioGFS();
+        // Activar control de lluvia
+        const checkbox = document.getElementById("gfs-visible");
+
+        if (checkbox) {
+            checkbox.checked = true;
+        }
+
+        window.lluviaGFSVisible = true;
 
         // Dibujar primera hora
         window.renderGFS();
@@ -1059,7 +1084,7 @@ window.loadGFS = async function() {
 
 
 // ============================================================
-// 15. GENERAR RASTER DESDE JSON
+// 14. GENERAR RASTER DESDE JSON
 // ============================================================
 
 function generarRasterGFS(hora) {
@@ -1070,7 +1095,6 @@ function generarRasterGFS(hora) {
         return null;
     }
 
-    // Coordenadas unicas
     const latitudes = [
         ...new Set(
             data.points.map(p => Number(p.latitude))
@@ -1086,11 +1110,10 @@ function generarRasterGFS(hora) {
     const filas = latitudes.length;
     const columnas = longitudes.length;
 
-    if (filas < 1 || columnas < 1) {
+    if (!filas || !columnas) {
         return null;
     }
 
-    // Crear imagen raster
     const canvas = document.createElement("canvas");
 
     canvas.width = columnas;
@@ -1100,7 +1123,6 @@ function generarRasterGFS(hora) {
 
     ctx.clearRect(0, 0, columnas, filas);
 
-    // Indices de coordenadas
     const indiceLat = new Map();
     const indiceLon = new Map();
 
@@ -1112,7 +1134,8 @@ function generarRasterGFS(hora) {
         indiceLon.set(lon, i);
     });
 
-    // Dibujar celdas raster
+    // Cada registro se dibuja como celda raster.
+    // No se dibujan puntos ni marcadores.
     data.points.forEach(p => {
 
         const lat = Number(p.latitude);
@@ -1130,7 +1153,7 @@ function generarRasterGFS(hora) {
 
         const lluvia = Number(valor);
 
-        // Cero y negativos transparentes
+        // Celdas sin lluvia transparentes
         if (lluvia <= 0) {
             return;
         }
@@ -1155,7 +1178,6 @@ function generarRasterGFS(hora) {
 
     });
 
-    // Calcular resolucion de la malla
     function calcularPaso(valores) {
 
         if (valores.length < 2) return 0;
@@ -1181,7 +1203,6 @@ function generarRasterGFS(hora) {
     const pasoLat = calcularPaso(latitudes);
     const pasoLon = calcularPaso(longitudes);
 
-    // Extension geografica
     const norte = latitudes[0] + pasoLat / 2;
     const sur = latitudes[filas - 1] - pasoLat / 2;
 
@@ -1204,7 +1225,7 @@ function generarRasterGFS(hora) {
 
 
 // ============================================================
-// 16. REPRESENTAR RASTER GFS EN EL MAPA
+// 15. REPRESENTAR RASTER GFS
 // ============================================================
 
 window.renderGFS = function() {
@@ -1229,7 +1250,6 @@ window.renderGFS = function() {
 
     const fecha = data.time[hora];
 
-    // Generar raster de la hora seleccionada
     const raster = generarRasterGFS(hora);
 
     if (!raster) {
@@ -1240,13 +1260,12 @@ window.renderGFS = function() {
 
     }
 
-    // Retirar imagen de la hora anterior
+    // Retirar imagen anterior
     window.capaGFS.clearLayers();
 
-    // Convertir canvas en imagen
+    // Crear imagen PNG del raster
     const imagen = raster.canvas.toDataURL("image/png");
 
-    // Superponer raster georreferenciado
     window.rasterGFS = L.imageOverlay(
         imagen,
         raster.bounds,
@@ -1256,39 +1275,43 @@ window.renderGFS = function() {
         }
     );
 
-    window.rasterGFS.addTo(window.capaGFS);
+    // Mostrar solo si el interruptor esta activado
+    if (window.lluviaGFSVisible) {
 
-    // Mostrar celdas sin suavizado
+        window.rasterGFS.addTo(window.capaGFS);
+
+    }
+
     const elemento = window.rasterGFS.getElement();
 
     if (elemento) {
         elemento.style.imageRendering = "pixelated";
     }
 
-    // Fecha de la hora visualizada
+    // Actualizar fecha y hora
     const label = document.getElementById("gfs-hour-label");
 
     if (label) {
 
         label.textContent =
-            "Fecha: " +
-            String(fecha).replace("T", " ") +
-            " | UTC-5";
+            String(fecha).replace("T", " ");
 
     }
 
-    // Actualizar slider, contador y resumen
     actualizarControlHorarioGFS();
 
     console.log(
-        "Raster GFS:",
+        "Raster GFS actualizado:",
         fecha,
         "| hora:",
         hora,
         "| dimensiones:",
         raster.filas,
         "x",
-        raster.columnas
+        raster.columnas,
+        "| lluvia visible:",
+        window.lluviaGFSVisible
     );
 
 };
+
