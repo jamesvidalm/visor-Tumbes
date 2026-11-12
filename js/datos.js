@@ -23,16 +23,57 @@ window.CONFIG = {
     carpetaQuebradas: "data/quebradas/",
 
     quebradas: [
-        { nombre: "Cabuyal", archivo: "cabuyal.geojson", columna: "QD_CABUYAL" },
-        { nombre: "Vaquería", archivo: "vaqueria.geojson", columna: "QD_VAQUERIA" },
-        { nombre: "El Tigre", archivo: "ElTigreQ.geojson", columna: "QD_ELTIGRE" },
-        { nombre:"Cabeza de Toro", archivo:"cabezadeToro.geojson", columna:"QD_CABEZADETORO" },
-        { nombre: "Jardina", archivo: "jardina.geojson", columna: "QD_JARDINA" },
-        { nombre: "Higuerón", archivo: "higueron.geojson", columna: "QD_HIGUERON" },
-        { nombre: "Corrales", archivo: "corrales.geojson", columna: "QD_CORRALES" },
-        { nombre: "Ceibal", archivo: "ceibal.geojson", columna: "QD_CEIBAL" }
+        {
+            nombre: "Cabuyal",
+            archivo: "cabuyal.geojson",
+            columna: "QD_CABUYAL"
+        },
+        {
+            nombre: "Vaquería",
+            archivo: "vaqueria.geojson",
+            columna: "QD_VAQUERIA"
+        },
+        {
+            nombre: "El Tigre",
+            archivo: "ElTigreQ.geojson",
+            columna: "QD_ELTIGRE"
+        },
+        {
+            nombre: "Cabeza de Toro",
+            archivo: "cabezadeToro.geojson",
+            columna: "QD_CABEZADETORO"
+        },
+        {
+            nombre: "Jardina",
+            archivo: "jardina.geojson",
+            columna: "QD_JARDINA"
+        },
+        {
+            nombre: "Higuerón",
+            archivo: "higueron.geojson",
+            columna: "QD_HIGUERON"
+        },
+        {
+            nombre: "Corrales",
+            archivo: "corrales.geojson",
+            columna: "QD_CORRALES"
+        },
+        {
+            nombre: "Ceibal",
+            archivo: "ceibal.geojson",
+            columna: "QD_CEIBAL"
+        },
+        {
+            nombre: "Cazaderos",
+            archivo: "cazaderos.geojson",
+            columna: "QD_CAZADEROS"
+        },
+        {
+            nombre: "Ozumares",
+            archivo: "ozumares.geojson",
+            columna: "QD_OZUMARES"
+        }
     ],
 
     manifestInundaciones: "data/inundaciones/manifest.json"
 };
-
