@@ -141,8 +141,7 @@ main {
 
 /* =====================================================
    5. PRIMERA PARTE
-   MAPA IZQUIERDA 45%
-   HIDROGRAMA DERECHA 55%
+   MAPA 45% + HIDROGRAMA 55%
 ===================================================== */
 
 .monitoring-layout {
@@ -162,7 +161,7 @@ main {
 
 
 /* =====================================================
-   6. PANELES GENERALES
+   6. PANELES
 ===================================================== */
 
 .panel {
@@ -283,7 +282,7 @@ main {
 
 
 /* =====================================================
-   9. MAPA LEAFLET
+   9. MAPA PRINCIPAL
 ===================================================== */
 
 #map {
@@ -419,49 +418,58 @@ main {
 
 /* =====================================================
    12. SEGUNDA PARTE
-   MAPAS DE INUNDACIÓN - ANCHO COMPLETO
+   INUNDACIONES: ANCHO COMPLETO
 ===================================================== */
 
 /*
-   Los escenarios se generan dinámicamente desde
-   js/inundaciones.js.
+   IMPORTANTE:
+   La primera sección monitoring-layout queda excluida.
 
-   El objetivo es que el panel principal de inundación
-   ocupe todo el ancho disponible, sin afectar la
-   primera sección del dashboard.
+   Se seleccionan los elementos que aparecen DESPUÉS
+   de monitoring-layout y contienen mapas Leaflet.
+
+   Esto permite alcanzar el contenedor exterior de
+   inundaciones y sus posibles envoltorios.
 */
+
+
+/* Contenedores posteriores al monitoreo que contienen mapas */
+
+main .monitoring-layout ~ *:not(footer):has(.leaflet-container) {
+
+    width: 100% !important;
+
+    max-width: none !important;
+
+    min-width: 0 !important;
+
+    margin-left: 0 !important;
+
+    margin-right: 0 !important;
+
+    box-sizing: border-box !important;
+}
+
+
+/* Expandir los contenedores internos de inundaciones */
+
+main .monitoring-layout ~ *:not(footer):has(.leaflet-container)
+*:has(.leaflet-container) {
+
+    max-width: none !important;
+
+    box-sizing: border-box !important;
+}
 
 
 /* Panel de inundaciones */
 
-main > .panel:not(.map-panel):not(.hydro-panel),
-main > section:not(.monitoring-layout):not(.system-description):has(.leaflet-container) {
+main .monitoring-layout ~ *:not(footer):has(.leaflet-container)
+.panel {
 
     width: 100% !important;
 
-    max-width: 100% !important;
-
-    min-width: 0 !important;
-
-    margin-left: 0;
-
-    margin-right: 0;
-}
-
-
-/* Contenedores principales de escenarios */
-
-#flood-section,
-#inundaciones,
-#mapas-inundacion,
-.flood-section,
-.inundaciones-section,
-.flood-container,
-.inundaciones-container {
-
-    width: 100% !important;
-
-    max-width: 100% !important;
+    max-width: none !important;
 
     min-width: 0 !important;
 }
@@ -478,9 +486,9 @@ main > section:not(.monitoring-layout):not(.system-description):has(.leaflet-con
 
     width: 100% !important;
 
-    max-width: 100% !important;
+    max-width: none !important;
 
-    min-width: 0;
+    min-width: 0 !important;
 
     grid-template-columns:
         repeat(6, minmax(0, 1fr)) !important;
@@ -497,15 +505,15 @@ main > section:not(.monitoring-layout):not(.system-description):has(.leaflet-con
 
     width: 100% !important;
 
-    max-width: 100%;
+    max-width: none !important;
 
-    min-width: 0;
+    min-width: 0 !important;
 
     overflow: hidden;
 }
 
 
-/* Mapas de cada escenario */
+/* Mapas de escenarios */
 
 .flood-map,
 .inundacion-map,
@@ -513,11 +521,13 @@ main > section:not(.monitoring-layout):not(.system-description):has(.leaflet-con
 
     width: 100% !important;
 
-    min-width: 0;
+    max-width: 100% !important;
+
+    min-width: 0 !important;
 }
 
 
-/* Contenedores de leyendas */
+/* Leyenda de profundidad */
 
 .flood-legend,
 .inundacion-legend,
@@ -525,7 +535,7 @@ main > section:not(.monitoring-layout):not(.system-description):has(.leaflet-con
 
     width: 100% !important;
 
-    max-width: 100% !important;
+    max-width: none !important;
 }
 
 
