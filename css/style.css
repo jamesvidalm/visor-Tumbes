@@ -28,6 +28,7 @@ html {
 body {
     margin: 0;
     min-height: 100vh;
+    width: 100%;
 
     background: var(--bg);
     color: var(--text);
@@ -91,13 +92,10 @@ body {
 
 .status i {
     display: inline-block;
-
     width: 7px;
     height: 7px;
-
     background: #34d399;
     border-radius: 50%;
-
     margin-right: 7px;
 }
 
@@ -164,7 +162,7 @@ main {
 
 
 /* =====================================================
-   6. PANELES
+   6. PANELES GENERALES
 ===================================================== */
 
 .panel {
@@ -196,7 +194,7 @@ main {
 
 
 /* =====================================================
-   7. CABECERA DE PANELES
+   7. CABECERAS
 ===================================================== */
 
 .panel-head {
@@ -421,24 +419,37 @@ main {
 
 /* =====================================================
    12. SEGUNDA PARTE
-   MAPAS DE INUNDACIÓN
+   MAPAS DE INUNDACIÓN - ANCHO COMPLETO
 ===================================================== */
 
 /*
-   No se modifican los mapas ni las capas Leaflet.
-   Los elementos de inundación conservan sus estilos
-   originales, pero sus contenedores pueden ocupar
-   todo el ancho del main.
+   Los escenarios se generan dinámicamente desde
+   js/inundaciones.js.
+
+   El objetivo es que el panel principal de inundación
+   ocupe todo el ancho disponible, sin afectar la
+   primera sección del dashboard.
 */
 
-/* Paneles de inundación independientes */
 
-main > .panel {
-    width: 100%;
-    max-width: 100%;
+/* Panel de inundaciones */
+
+main > .panel:not(.map-panel):not(.hydro-panel),
+main > section:not(.monitoring-layout):not(.system-description):has(.leaflet-container) {
+
+    width: 100% !important;
+
+    max-width: 100% !important;
+
+    min-width: 0 !important;
+
+    margin-left: 0;
+
+    margin-right: 0;
 }
 
-/* Contenedores de escenarios conocidos */
+
+/* Contenedores principales de escenarios */
 
 #flood-section,
 #inundaciones,
@@ -448,59 +459,73 @@ main > .panel {
 .flood-container,
 .inundaciones-container {
 
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
+    width: 100% !important;
+
+    max-width: 100% !important;
+
+    min-width: 0 !important;
 }
 
-/* Grillas de escenarios, si usan estas clases */
+
+/* Grilla de los seis escenarios */
 
 .flood-grid,
 .inundaciones-grid,
 .scenarios-grid,
 .mapas-grid {
 
-    width: 100%;
-    max-width: 100%;
+    display: grid !important;
 
-    display: grid;
+    width: 100% !important;
+
+    max-width: 100% !important;
+
+    min-width: 0;
 
     grid-template-columns:
-        repeat(6, minmax(0, 1fr));
+        repeat(6, minmax(0, 1fr)) !important;
 
     gap: 12px;
 }
 
-/* Tarjetas */
+
+/* Tarjetas individuales */
 
 .flood-card,
 .scenario-card,
 .inundacion-card {
 
-    width: 100%;
+    width: 100% !important;
+
+    max-width: 100%;
+
     min-width: 0;
 
     overflow: hidden;
 }
 
-/* Mapas de escenarios */
+
+/* Mapas de cada escenario */
 
 .flood-map,
 .inundacion-map,
 .scenario-map {
 
-    width: 100%;
+    width: 100% !important;
+
     min-width: 0;
 }
 
-/* Leyendas */
+
+/* Contenedores de leyendas */
 
 .flood-legend,
 .inundacion-legend,
 .legend-depth {
 
-    width: 100%;
-    max-width: 100%;
+    width: 100% !important;
+
+    max-width: 100% !important;
 }
 
 
@@ -560,7 +585,7 @@ footer {
     .mapas-grid {
 
         grid-template-columns:
-            repeat(3, minmax(0, 1fr));
+            repeat(3, minmax(0, 1fr)) !important;
     }
 
 }
@@ -573,21 +598,17 @@ footer {
 @media (max-width: 900px) {
 
     .monitoring-layout {
-
         grid-template-columns: 1fr;
     }
 
     .map-panel,
     .hydro-panel {
-
         min-height: 550px;
     }
 
     #map,
     #hydro-chart {
-
         height: 480px;
-
         flex: none;
     }
 
@@ -597,7 +618,7 @@ footer {
     .mapas-grid {
 
         grid-template-columns:
-            repeat(2, minmax(0, 1fr));
+            repeat(2, minmax(0, 1fr)) !important;
     }
 
 }
@@ -610,11 +631,8 @@ footer {
 @media (max-width: 650px) {
 
     .topbar {
-
         padding: 15px;
-
         align-items: flex-start;
-
         gap: 10px;
     }
 
@@ -644,24 +662,18 @@ footer {
     }
 
     .monitoring-layout {
-
         grid-template-columns: 1fr;
-
         gap: 10px;
     }
 
     .map-panel,
     .hydro-panel {
-
         min-height: auto;
     }
 
     .panel-head {
-
         align-items: flex-start;
-
         flex-direction: column;
-
         padding: 13px;
     }
 
@@ -670,20 +682,14 @@ footer {
     }
 
     #map {
-
         height: 430px;
-
         min-height: 430px;
-
         flex: none;
     }
 
     #hydro-chart {
-
         height: 390px;
-
         min-height: 390px;
-
         flex: none;
     }
 
@@ -695,8 +701,7 @@ footer {
     .inundaciones-grid,
     .scenarios-grid,
     .mapas-grid {
-
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
     }
 
     footer {
@@ -704,3 +709,4 @@ footer {
     }
 
 }
+
