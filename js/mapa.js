@@ -1,13 +1,14 @@
 
-// ============================================================
-// MAPA.JS - DASHBOARD HIDROLOGICO CUENCA DEL RIO TUMBES
-// ============================================================
-// - Muestra estaciones El Tigre y Cabo Inga.
-// - Carga polígonos GeoJSON desde CONFIG.quebradas.
-// - Permite seleccionar estaciones y quebradas.
-// - Actualiza el hidrograma al hacer clic.
-// - Leyenda dinámica para las 10 quebradas.
-// ============================================================
+ // ============================================================
+ // MAPA.JS - DASHBOARD HIDROLOGICO CUENCA DEL RIO TUMBES
+ // ============================================================
+ // - Estaciones: El Tigre y Cabo Inga.
+ // - Diez quebradas GeoJSON.
+ // - Cuatro mapas base intercambiables.
+ // - OpenTopoMap como mapa predeterminado.
+ // - Leyenda dinámica de quebradas.
+ // - Selección de polígonos para actualizar hidrogramas.
+ // ============================================================
 
 
 // ============================================================
@@ -39,22 +40,104 @@ window.initMap = function(points, onSelect) {
     }).setView([-3.86, -80.43], 10);
 
 
-    // Fondo OpenStreetMap.
-    L.tileLayer(
+    // ========================================================
+    // 2.1 MAPAS BASE
+    // ========================================================
+
+    // OPEN TOPOMAP
+    // Muestra relieve, curvas de nivel y características
+    // topográficas del territorio.
+
+    const openTopoMap = L.tileLayer(
+        "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+        {
+            maxZoom: 17,
+            maxNativeZoom: 17,
+            attribution:
+                "© OpenTopoMap | © OpenStreetMap contributors"
+        }
+    );
+
+
+    // OPEN STREET MAP
+    // Mapa convencional con carreteras y localidades.
+
+    const openStreetMap = L.tileLayer(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
             maxZoom: 19,
-            attribution: "© OpenStreetMap"
+            attribution:
+                "© OpenStreetMap contributors"
+        }
+    );
+
+
+    // GOOGLE SATELLITE
+    // Imagen satelital.
+
+    const googleSatellite = L.tileLayer(
+        "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        {
+            maxZoom: 20,
+            attribution: "© Google"
+        }
+    );
+
+
+    // GOOGLE MAPS
+    // Mapa convencional de Google.
+
+    const googleMaps = L.tileLayer(
+        "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        {
+            maxZoom: 20,
+            attribution: "© Google"
+        }
+    );
+
+
+    // ========================================================
+    // 2.2 MAPA PREDETERMINADO
+    // ========================================================
+
+    // OPEN TOPOMAP SE CARGA AUTOMÁTICAMENTE.
+
+    openTopoMap.addTo(map);
+
+
+    // ========================================================
+    // 2.3 SELECTOR DE MAPAS BASE
+    // ========================================================
+
+    const mapasBase = {
+
+        "OpenTopoMap - Relieve": openTopoMap,
+
+        "OpenStreetMap - Calles": openStreetMap,
+
+        "Google Satellite": googleSatellite,
+
+        "Google Maps": googleMaps
+
+    };
+
+
+    L.control.layers(
+        mapasBase,
+        null,
+        {
+            position: "topright",
+            collapsed: false
         }
     ).addTo(map);
 
 
+    // ========================================================
+    // 2.4 MARCADORES DE ESTACIONES
+    // ========================================================
+
     const bounds = [];
 
-
-    // --------------------------------------------------------
-    // ESTACIONES HIDROLÓGICAS
-    // --------------------------------------------------------
 
     points.forEach(p => {
 
@@ -72,6 +155,9 @@ window.initMap = function(points, onSelect) {
 
         marker.bindTooltip(p.nombre);
 
+
+        // Seleccionar estación y actualizar hidrograma.
+
         marker.on("click", () => {
 
             onSelect(p);
@@ -84,7 +170,10 @@ window.initMap = function(points, onSelect) {
     });
 
 
-    // Ajustar mapa a las estaciones.
+    // ========================================================
+    // 2.5 AJUSTAR VISTA DEL MAPA
+    // ========================================================
+
     if (bounds.length) {
 
         map.fitBounds(
@@ -109,9 +198,9 @@ window.initMap = function(points, onSelect) {
 window.addPolygons = async function(map, onSelect) {
 
 
-    // --------------------------------------------------------
-    // VERIFICAR CONFIGURACIÓN
-    // --------------------------------------------------------
+    // ========================================================
+    // 3.1 VERIFICAR CONFIGURACIÓN
+    // ========================================================
 
     if (
         !window.CONFIG ||
@@ -131,9 +220,9 @@ window.addPolygons = async function(map, onSelect) {
     );
 
 
-    // --------------------------------------------------------
-    // 3.1 CREAR LEYENDA DINÁMICA
-    // --------------------------------------------------------
+    // ========================================================
+    // 3.2 CREAR LEYENDA
+    // ========================================================
 
     const legend = L.control({
         position: "bottomright"
@@ -159,7 +248,8 @@ window.addPolygons = async function(map, onSelect) {
         div.style.overflowY = "auto";
 
 
-        // Título de leyenda.
+        // Título.
+
         const title = document.createElement("div");
 
         title.textContent = "LEYENDA DE QUEBRADAS";
@@ -168,11 +258,11 @@ window.addPolygons = async function(map, onSelect) {
         title.style.color = "#8eb9ed";
         title.style.marginBottom = "5px";
 
-
         div.appendChild(title);
 
 
-        // Generar leyenda para todas las quebradas.
+        // Agregar las diez quebradas automáticamente.
+
         CONFIG.quebradas.forEach((q, i) => {
 
             const item = document.createElement("div");
@@ -219,11 +309,12 @@ window.addPolygons = async function(map, onSelect) {
     legend.addTo(map);
 
 
-    // --------------------------------------------------------
-    // 3.2 CARGAR TODOS LOS POLÍGONOS GEOJSON
-    // --------------------------------------------------------
+    // ========================================================
+    // 3.3 CARGAR POLÍGONOS GEOJSON
+    // ========================================================
 
     const capasQuebradas = [];
+
 
     for (
         let i = 0;
@@ -233,6 +324,7 @@ window.addPolygons = async function(map, onSelect) {
 
         const q = CONFIG.quebradas[i];
 
+
         const color = COLORES_QUEBRADAS[
             i % COLORES_QUEBRADAS.length
         ];
@@ -240,7 +332,8 @@ window.addPolygons = async function(map, onSelect) {
 
         try {
 
-            // Ruta del GeoJSON.
+            // Ruta del archivo GeoJSON.
+
             const url =
                 CONFIG.carpetaQuebradas + q.archivo;
 
@@ -268,9 +361,9 @@ window.addPolygons = async function(map, onSelect) {
             const geojson = await response.json();
 
 
-            // ------------------------------------------------
+            // =================================================
             // CREAR CAPA GEOJSON
-            // ------------------------------------------------
+            // =================================================
 
             const capa = L.geoJSON(
                 geojson,
@@ -291,12 +384,13 @@ window.addPolygons = async function(map, onSelect) {
 
 
                         // Nombre de la quebrada.
+
                         layer.bindTooltip(q.nombre);
 
 
-                        // ------------------------------------
+                        // =====================================
                         // SELECCIONAR QUEBRADA
-                        // ------------------------------------
+                        // =====================================
 
                         layer.on("click", () => {
 
@@ -304,6 +398,7 @@ window.addPolygons = async function(map, onSelect) {
                                 "Quebrada seleccionada:",
                                 q.nombre
                             );
+
 
                             onSelect({
 
@@ -333,6 +428,8 @@ window.addPolygons = async function(map, onSelect) {
             );
 
 
+            // Agregar polígono al mapa.
+
             capa.addTo(map);
 
             capasQuebradas.push(capa);
@@ -356,9 +453,9 @@ window.addPolygons = async function(map, onSelect) {
     }
 
 
-    // --------------------------------------------------------
-    // 3.3 RESUMEN DE CARGA
-    // --------------------------------------------------------
+    // ========================================================
+    // 3.4 RESUMEN DE CARGA
+    // ========================================================
 
     console.log("==================================");
 
@@ -380,16 +477,17 @@ window.addPolygons = async function(map, onSelect) {
 
         console.warn(
             "Algunas quebradas no pudieron cargarse. " +
-            "Revisa las rutas GeoJSON en la consola."
+            "Revisa las rutas de los archivos GeoJSON."
         );
 
     } else {
 
         console.log(
-            "Las 10 quebradas se cargaron correctamente."
+            "Todas las quebradas se cargaron correctamente."
         );
 
     }
+
 
     console.log("==================================");
 
@@ -397,4 +495,3 @@ window.addPolygons = async function(map, onSelect) {
     return capasQuebradas;
 
 };
-
