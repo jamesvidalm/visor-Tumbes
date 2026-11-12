@@ -8,7 +8,7 @@ window.CONFIG = {
     hojaUbicaciones: "Ubicacion",
 
     // INICIO DEL PRONOSTICO
-    inicioPronostico:"2026-11-12T02:00:00-05:00",
+    inicioPronostico: "2026-11-12T02:00:00-05:00",
 
     // CARPETA DE MAPAS DE INUNDACION
     manifestInundaciones: "data/inundaciones/manifest.json",
@@ -76,6 +76,17 @@ window.CONFIG = {
             nombre: "Ceibal",
             archivo: "ceibal.geojson",
             columna: "QD_CEIBAL"
+        },
+        {
+            nombre: "Cazaderos",
+            archivo: "cazaderos.geojson",
+            columna: "QD_CAZADEROS"
+        },
+        {
+            nombre: "Ozumares",
+            archivo: "ozumares.geojson",
+            columna: "QD_OZUMARES"
         }
     ]
+
 };
