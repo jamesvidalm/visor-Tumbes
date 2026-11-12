@@ -4,10 +4,10 @@
 // ============================================================
 // - Carga Excel de caudales.
 // - Carga Excel de ubicaciones.
-// - Verifica las columnas necesarias.
-// - Inicializa estaciones El Tigre y Cabo Inga.
-// - Carga las 10 quebradas mediante CONFIG.quebradas.
-// - Permite actualizar el hidrograma al seleccionar elementos.
+// - Inicializa estaciones.
+// - Carga las 10 quebradas.
+// - Carga precipitacion GFS desde JSON.
+// - Mantiene los hidrogramas existentes.
 // ============================================================
 
 
@@ -37,7 +37,7 @@ async function loadWorkbook(path, sheetName) {
 
     if (!sheet) {
         throw new Error(
-            "No se encontró la hoja: " + sheetName
+            "No se encontro la hoja: " + sheetName
         );
     }
 
@@ -45,11 +45,12 @@ async function loadWorkbook(path, sheetName) {
         defval: null,
         raw: true
     });
+
 }
 
 
 // ============================================================
-// 2. ACTUALIZAR ELEMENTOS HTML DE FORMA SEGURA
+// 2. ACTUALIZAR TEXTOS
 // ============================================================
 
 function setText(id, value) {
@@ -79,7 +80,7 @@ function normalizeName(value) {
 
 
 // ============================================================
-// 4. INICIALIZAR DASHBOARD
+// 4. INICIAR DASHBOARD
 // ============================================================
 
 async function startDashboard() {
@@ -90,32 +91,30 @@ async function startDashboard() {
         console.log("INICIANDO DASHBOARD TUMBES");
         console.log("==================================");
 
-
         // ----------------------------------------------------
-        // 4.1 VERIFICAR CONFIGURACIÓN
+        // 4.1 VERIFICAR CONFIGURACION
         // ----------------------------------------------------
 
         if (!window.CONFIG) {
             throw new Error(
-                "No se encontró window.CONFIG. Verifica js/data.js."
+                "No se encontro CONFIG. Verifica config.js."
             );
         }
 
         if (!Array.isArray(CONFIG.puntos)) {
             throw new Error(
-                "CONFIG.puntos no está correctamente definido."
+                "CONFIG.puntos no esta correctamente definido."
             );
         }
 
         if (!Array.isArray(CONFIG.quebradas)) {
             throw new Error(
-                "CONFIG.quebradas no está correctamente definido."
+                "CONFIG.quebradas no esta correctamente definido."
             );
         }
 
-
         // ----------------------------------------------------
-        // 4.2 CARGAR DATOS EXCEL
+        // 4.2 CARGAR EXCEL
         // ----------------------------------------------------
 
         console.log("Cargando archivos Excel...");
@@ -134,7 +133,6 @@ async function startDashboard() {
 
         ]);
 
-
         if (!flows.length) {
             throw new Error(
                 "El Excel de caudales no contiene registros."
@@ -147,23 +145,22 @@ async function startDashboard() {
             );
         }
 
-
         // ----------------------------------------------------
-        // 4.3 VERIFICAR COLUMNAS DEL EXCEL
+        // 4.3 VERIFICAR COLUMNAS
         // ----------------------------------------------------
 
         const headers = Object.keys(flows[0]);
 
         const required = [
 
-            // Estaciones principales
             "fecha",
+
             "Q_TIGRE",
             "Q_TIGRE_P",
+
             "Q_CABOINGA",
             "Q_CABOINGA_P",
 
-            // Quebradas existentes
             "QD_HIGUERON",
             "QD_CABUYAL",
             "QD_VAQUERIA",
@@ -172,34 +169,26 @@ async function startDashboard() {
             "QD_JARDINA",
             "QD_CABEZADETORO",
             "QD_CORRALES",
-
-            // NUEVAS QUEBRADAS
             "QD_CAZADEROS",
             "QD_OZUMARES"
 
         ];
 
-
         const missing = required.filter(
             column => !headers.includes(column)
         );
 
-
         if (missing.length) {
-
             throw new Error(
-                "Faltan columnas en el Excel de caudales: " +
+                "Faltan columnas en el Excel: " +
                 missing.join(", ")
             );
-
         }
 
-
-        console.log("Columnas del Excel verificadas.");
-
+        console.log("Columnas verificadas.");
 
         // ----------------------------------------------------
-        // 4.4 OBTENER COORDENADAS DE ESTACIONES
+        // 4.4 COORDENADAS DE ESTACIONES
         // ----------------------------------------------------
 
         const points = CONFIG.puntos.map(p => {
@@ -210,33 +199,24 @@ async function startDashboard() {
                     normalizeName(p.id)
             );
 
-
             if (!row) {
-
                 throw new Error(
-                    "No se encontró " + p.id +
-                    " en ubicacion.xlsx (columna ID)."
+                    "No se encontro " + p.id +
+                    " en ubicacion.xlsx."
                 );
-
             }
-
 
             const lat = Number(row.Lat);
             const lon = Number(row.Long);
-
 
             if (
                 !Number.isFinite(lat) ||
                 !Number.isFinite(lon)
             ) {
-
                 throw new Error(
-                    "Coordenadas inválidas para " +
-                    p.id + "."
+                    "Coordenadas invalidas para " + p.id
                 );
-
             }
-
 
             return {
                 ...p,
@@ -246,9 +226,8 @@ async function startDashboard() {
 
         });
 
-
         // ----------------------------------------------------
-        // 4.5 FUNCIÓN PARA SELECCIONAR ESTACIONES Y QUEBRADAS
+        // 4.5 SELECCIONAR ESTACION O QUEBRADA
         // ----------------------------------------------------
 
         const select = item => {
@@ -262,15 +241,19 @@ async function startDashboard() {
 
         };
 
-
         // ----------------------------------------------------
         // 4.6 INICIALIZAR MAPA
         // ----------------------------------------------------
 
         console.log("Inicializando mapa...");
 
-        const map = initMap(points, select);
+        if (typeof window.initMap !== "function") {
+            throw new Error(
+                "No existe initMap(). Verifica js/mapa.js."
+            );
+        }
 
+        const map = window.initMap(points, select);
 
         if (!map) {
             throw new Error(
@@ -278,33 +261,67 @@ async function startDashboard() {
             );
         }
 
-
         // ----------------------------------------------------
-        // 4.7 CARGAR LOS POLÍGONOS DE LAS 10 QUEBRADAS
+        // 4.7 CARGAR QUEBRADAS
         // ----------------------------------------------------
 
         console.log("Cargando quebradas...");
 
-        console.log(
-            "Número de quebradas configuradas:",
-            CONFIG.quebradas.length
-        );
+        if (typeof window.addPolygons === "function") {
 
+            await window.addPolygons(map, select);
 
-        await addPolygons(map, select);
+        } else {
 
+            console.warn(
+                "No se encontro addPolygons()."
+            );
+
+        }
 
         // ----------------------------------------------------
-        // 4.8 INFORMACIÓN FINAL
+        // 4.8 CARGAR PRONOSTICO GFS JSON
         // ----------------------------------------------------
 
-        console.log("");
+        console.log("Cargando pronostico GFS...");
+
+        try {
+
+            await window.loadGFS();
+
+            setText(
+                "data-status",
+                "GFS: " +
+                window.datosGFS.points.length +
+                " puntos | " +
+                window.datosGFS.time.length +
+                " horas"
+            );
+
+        } catch (gfsError) {
+
+            console.error(
+                "Error de lectura GFS:",
+                gfsError
+            );
+
+            setText(
+                "data-status",
+                "Error al cargar precipitacion GFS"
+            );
+
+        }
+
+        // ----------------------------------------------------
+        // 4.9 RESUMEN
+        // ----------------------------------------------------
+
         console.log("==================================");
-        console.log("DASHBOARD CARGADO CORRECTAMENTE");
+        console.log("DASHBOARD CARGADO");
         console.log("==================================");
 
         console.log(
-            "Registros horarios:",
+            "Registros hidrologicos:",
             flows.length
         );
 
@@ -314,35 +331,21 @@ async function startDashboard() {
         );
 
         console.log(
-            "Quebradas configuradas:",
+            "Quebradas:",
             CONFIG.quebradas.length
         );
 
-        CONFIG.quebradas.forEach((q, index) => {
-
-            console.log(
-                (index + 1) + ". " +
-                q.nombre +
-                " | " +
-                q.columna +
-                " | " +
-                q.archivo
-            );
-
-        });
-
         console.log(
-            "Inicio del pronóstico:",
-            CONFIG.inicioPronostico
+            "Archivo GFS:",
+            CONFIG.gfsFile
         );
 
         console.log("==================================");
 
-
     } catch (err) {
 
         console.error(
-            "ERROR AL INICIAR EL DASHBOARD:",
+            "ERROR AL INICIAR DASHBOARD:",
             err
         );
 
@@ -353,7 +356,7 @@ async function startDashboard() {
 
         setText(
             "data-status",
-            "Error de lectura"
+            "Error de lectura hidrologica"
         );
 
     }
@@ -362,7 +365,7 @@ async function startDashboard() {
 
 
 // ============================================================
-// 5. EJECUTAR CUANDO SE CARGUE EL HTML
+// 5. EJECUTAR DASHBOARD
 // ============================================================
 
 document.addEventListener(
