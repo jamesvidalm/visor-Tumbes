@@ -5,9 +5,9 @@
 // - Carga Excel de caudales.
 // - Carga Excel de ubicaciones.
 // - Inicializa estaciones.
-// - Carga las 10 quebradas.
-// - Carga precipitacion GFS desde JSON.
+// - Carga las 10 subcuencas.
 // - Mantiene los hidrogramas existentes.
+// - Sin carga de precipitacion GFS.
 // ============================================================
 
 
@@ -227,7 +227,7 @@ async function startDashboard() {
         });
 
         // ----------------------------------------------------
-        // 4.5 SELECCIONAR ESTACION O QUEBRADA
+        // 4.5 SELECCIONAR ESTACION O SUBCUENCA
         // ----------------------------------------------------
 
         const select = item => {
@@ -262,10 +262,10 @@ async function startDashboard() {
         }
 
         // ----------------------------------------------------
-        // 4.7 CARGAR QUEBRADAS
+        // 4.7 CARGAR SUBCUENCAS
         // ----------------------------------------------------
 
-        console.log("Cargando quebradas...");
+        console.log("Cargando subcuencas...");
 
         if (typeof window.addPolygons === "function") {
 
@@ -280,40 +280,7 @@ async function startDashboard() {
         }
 
         // ----------------------------------------------------
-        // 4.8 CARGAR PRONOSTICO GFS JSON
-        // ----------------------------------------------------
-
-        console.log("Cargando pronostico GFS...");
-
-        try {
-
-            await window.loadGFS();
-
-            setText(
-                "data-status",
-                "GFS: " +
-                window.datosGFS.points.length +
-                " puntos | " +
-                window.datosGFS.time.length +
-                " horas"
-            );
-
-        } catch (gfsError) {
-
-            console.error(
-                "Error de lectura GFS:",
-                gfsError
-            );
-
-            setText(
-                "data-status",
-                "Error al cargar precipitacion GFS"
-            );
-
-        }
-
-        // ----------------------------------------------------
-        // 4.9 RESUMEN
+        // 4.8 RESUMEN
         // ----------------------------------------------------
 
         console.log("==================================");
@@ -331,16 +298,16 @@ async function startDashboard() {
         );
 
         console.log(
-            "Quebradas:",
+            "Subcuencas configuradas:",
             CONFIG.quebradas.length
         );
 
-        console.log(
-            "Archivo GFS:",
-            CONFIG.gfsFile
-        );
-
         console.log("==================================");
+
+        setText(
+            "data-status",
+            "Datos hidrologicos cargados correctamente"
+        );
 
     } catch (err) {
 
