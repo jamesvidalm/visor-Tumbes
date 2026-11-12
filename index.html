@@ -1,185 +1,21 @@
+<!-- PRIMERA PARTE -->
+<section class="monitoring-layout">
 
-<!DOCTYPE html>
-<html lang="es">
-
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>Cuenca del río Tumbes | Sistema de Pronóstico Hidrológico</title>
-
-<link rel="stylesheet"
-href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-
-<link rel="stylesheet" href="css/style.css">
-
-</head>
-
-<body>
-
-<!-- ENCABEZADO -->
-<header class="topbar">
-
-    <div class="brand-title">
-
-        <div class="eyebrow">
-            SISTEMA DE PRONÓSTICO HIDROLÓGICO
-        </div>
-
-        <h1>Cuenca del río Tumbes</h1>
-
-    </div>
-
-    <div class="header-right">
-
-        <div class="status">
-            <i></i> PRONÓSTICO HORARIO
-        </div>
-
-        <div id="data-status" class="data-status">
-            Cargando información...
-        </div>
-
-    </div>
-
-</header>
-
-
-<main>
-
-    <!-- DESCRIPCIÓN -->
-    <section class="system-description">
-
-        <p>
-            Sistema de monitoreo y pronóstico hidrológico de la cuenca
-            del río Tumbes. Integra el modelo hidrológico
-            <strong>RRI (Rainfall-Runoff-Inundation)</strong> y las
-            simulaciones hidráulicas de <strong>HEC-RAS</strong> para
-            visualizar la evolución de los caudales pronosticados y
-            analizar escenarios de inundación bajo diferentes
-            condiciones hidrológicas.
-        </p>
-
+    <section class="panel map-panel">
+        <!-- MAPA -->
     </section>
 
-
-    <!-- ================================================= -->
-    <!-- 01. MONITOREO Y PRONÓSTICO HIDROLÓGICO            -->
-    <!-- ================================================= -->
-
-    <section class="monitoring-layout">
-
-        <!-- MAPA IZQUIERDO -->
-        <section class="panel map-panel">
-
-            <div class="panel-head">
-
-                <div>
-                    <small>01 / ÁREA DE ESTUDIO</small>
-                    <h3>Estaciones y quebradas</h3>
-                </div>
-
-                <div class="legend">
-
-                    <span>
-                        <b class="point"></b>
-                        Puntos
-                    </span>
-
-                    <span>
-                        <b class="polygon"></b>
-                        Quebradas
-                    </span>
-
-                </div>
-
-            </div>
-
-            <div id="map"></div>
-
-            <div class="hint">
-                Selecciona una estación o quebrada para visualizar
-                su hidrograma de caudal.
-            </div>
-
-        </section>
-
-
-        <!-- HIDROGRAMA DERECHO -->
-        <section class="panel hydro-panel">
-
-            <div class="panel-head">
-
-                <div>
-
-                    <small>01 / PRONÓSTICO HIDROLÓGICO</small>
-
-                    <h3 id="hydro-title">
-                        Cargando estación El Tigre...
-                    </h3>
-
-                </div>
-
-                <span class="unit">
-                    CAUDAL · m³/s
-                </span>
-
-            </div>
-
-            <div id="hydro-subtitle" class="subinfo">
-                Preparando información hidrológica...
-            </div>
-
-            <div id="hydro-chart">
-
-                <div class="empty">
-                    Cargando hidrograma...
-                </div>
-
-            </div>
-
-        </section>
-
+    <section class="panel hydro-panel">
+        <!-- HIDROGRAMA -->
     </section>
 
+</section>
 
-    <!-- ================================================= -->
-    <!-- 02. MAPAS DE INUNDACIÓN                           -->
-    <!-- ================================================= -->
+<!-- SEGUNDA PARTE -->
+<!-- ESCENARIOS DE INUNDACIÓN -->
+<!-- Generados por inundaciones.js -->
 
-    <!-- Los mapas se generan automáticamente mediante
-         js/inundaciones.js. Se conserva su funcionamiento. -->
-
-
-    <!-- PIE DE PÁGINA -->
-    <footer>
-
-        Sistema de Pronóstico Hidrológico e Hidráulico de la
-        cuenca del río Tumbes · Datos horarios · Perú (UTC−5)
-
-    </footer>
-
-</main>
-
-
-<!-- LIBRERÍAS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-
-
-<!-- JAVASCRIPT DEL SISTEMA -->
-<script src="js/config.js"></script>
-
-<script src="js/hidrogramas.js"></script>
-
-<script src="js/inundaciones.js"></script>
-
-<script src="js/mapa.js"></script>
-
-<script src="js/app.js"></script>
-
-</body>
-</html>
+<footer>
+    Sistema de Pronóstico Hidrológico e Hidráulico
+    de la cuenca del río Tumbes · Perú (UTC−5)
+</footer>
