@@ -1,5 +1,6 @@
+
 /* =====================================================
-   CONFIGURACIÓN GENERAL
+   1. CONFIGURACIÓN GENERAL
 ===================================================== */
 
 * {
@@ -19,8 +20,16 @@
     --purple: #a78bfa;
 }
 
+html {
+    width: 100%;
+    min-height: 100%;
+}
+
 body {
     margin: 0;
+    width: 100%;
+    min-height: 100vh;
+
     background: var(--bg);
     color: var(--text);
 
@@ -29,7 +38,7 @@ body {
 
 
 /* =====================================================
-   ENCABEZADO
+   2. ENCABEZADO
 ===================================================== */
 
 .topbar {
@@ -77,14 +86,18 @@ h1 {
     color: #a9bad0;
     font-size: 10px;
     letter-spacing: 1px;
+    white-space: nowrap;
 }
 
 .status i {
     display: inline-block;
+
     width: 7px;
     height: 7px;
+
     background: #34d399;
     border-radius: 50%;
+
     margin-right: 7px;
 }
 
@@ -95,21 +108,21 @@ h1 {
 
 
 /* =====================================================
-   CONTENEDOR
+   3. CONTENEDOR PRINCIPAL
 ===================================================== */
 
 main {
     width: 100%;
-    max-width: 1800px;
+    max-width: 1900px;
 
-    margin: auto;
+    margin: 0 auto;
 
     padding: 18px clamp(12px, 2vw, 28px);
 }
 
 
 /* =====================================================
-   DESCRIPCIÓN
+   4. DESCRIPCIÓN DEL SISTEMA
 ===================================================== */
 
 .system-description {
@@ -117,25 +130,27 @@ main {
 }
 
 .system-description p {
-    max-width: 1250px;
+    max-width: 1350px;
 
     margin: 0;
 
     color: #a9bad0;
+
     font-size: 13px;
     line-height: 1.7;
 }
 
 
 /* =====================================================
-   01. MAPA IZQUIERDA + HIDROGRAMA DERECHA
+   5. PRIMERA PARTE
+   MAPA IZQUIERDA + HIDROGRAMA DERECHA
 ===================================================== */
 
 .monitoring-layout {
 
     display: grid;
 
-    grid-template-columns: 45% 55%;
+    grid-template-columns: 45% minmax(0, 55%);
 
     gap: 14px;
 
@@ -146,7 +161,7 @@ main {
 
 
 /* =====================================================
-   PANELES
+   6. PANELES GENERALES
 ===================================================== */
 
 .panel {
@@ -178,7 +193,7 @@ main {
 
 
 /* =====================================================
-   CABECERAS
+   7. CABECERA DE LOS PANELES
 ===================================================== */
 
 .panel-head {
@@ -220,7 +235,7 @@ main {
 
 
 /* =====================================================
-   LEYENDA
+   8. LEYENDA DEL MAPA
 ===================================================== */
 
 .legend {
@@ -249,7 +264,6 @@ main {
 .polygon {
 
     width: 9px;
-
     height: 9px;
 
     border-radius: 50%;
@@ -265,7 +279,7 @@ main {
 
 
 /* =====================================================
-   MAPA LEAFLET
+   9. MAPA LEAFLET
 ===================================================== */
 
 #map {
@@ -302,7 +316,7 @@ main {
 
 
 /* =====================================================
-   INDICACIÓN DEL MAPA
+   10. INDICACIÓN DEL MAPA
 ===================================================== */
 
 .hint {
@@ -320,7 +334,7 @@ main {
 
 
 /* =====================================================
-   HIDROGRAMAS
+   11. HIDROGRAMAS
 ===================================================== */
 
 .unit {
@@ -382,7 +396,6 @@ main {
 .empty {
 
     width: 100%;
-
     height: 100%;
 
     min-height: 300px;
@@ -400,19 +413,124 @@ main {
 
 
 /* =====================================================
-   MAPAS DE INUNDACIÓN
+   12. SEGUNDA PARTE
+   MAPAS DE INUNDACIÓN - ANCHO COMPLETO
+===================================================== */
+
+/*
+   Los escenarios se generan dinámicamente mediante
+   js/inundaciones.js.
+
+   Se evita limitar su ancho y se permite que ocupen
+   toda la anchura disponible del dashboard.
+*/
+
+main > section,
+main > .panel,
+main > .flood-section,
+main > .inundaciones-section,
+main > #flood-section {
+
+    max-width: 100%;
+}
+
+
+/* Contenedores habituales de los escenarios */
+
+.flood-section,
+.inundaciones-section,
+#flood-section,
+#inundaciones,
+#mapas-inundacion,
+.flood-container,
+.inundaciones-container {
+
+    width: 100% !important;
+
+    max-width: none !important;
+
+    min-width: 0;
+
+    margin-left: 0;
+    margin-right: 0;
+}
+
+
+/* Grillas de mapas de inundación */
+
+.flood-grid,
+.inundaciones-grid,
+.scenarios-grid,
+.mapas-grid {
+
+    width: 100%;
+
+    max-width: none;
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(6, minmax(0, 1fr));
+
+    gap: 12px;
+}
+
+
+/* Tarjetas de escenarios */
+
+.flood-card,
+.scenario-card,
+.inundacion-card {
+
+    min-width: 0;
+
+    width: 100%;
+
+    overflow: hidden;
+}
+
+
+/* Mapas individuales */
+
+.flood-map,
+.inundacion-map,
+.scenario-map {
+
+    width: 100%;
+
+    min-width: 0;
+}
+
+
+/* Leyenda de inundación */
+
+.flood-legend,
+.inundacion-legend,
+.legend-depth {
+
+    width: 100%;
+
+    max-width: none;
+}
+
+
+/* =====================================================
+   13. CONTROLES LEAFLET DE INUNDACIÓN
 ===================================================== */
 
 .leaflet-control-layers {
+
     border-radius: 8px !important;
 }
 
 
 /* =====================================================
-   PIE DE PÁGINA
+   14. PIE DE PÁGINA
 ===================================================== */
 
 footer {
+
+    width: 100%;
 
     text-align: center;
 
@@ -425,38 +543,90 @@ footer {
 
 
 /* =====================================================
-   TABLETS
+   15. TABLETS Y PANTALLAS MEDIANAS
 ===================================================== */
 
-@media (max-width: 1050px) {
+@media (max-width: 1200px) {
 
     .monitoring-layout {
-        grid-template-columns: 1fr;
+
+        grid-template-columns: 44% minmax(0, 56%);
+
+        gap: 10px;
     }
 
-    .map-panel,
-    .hydro-panel {
-        min-height: 550px;
+    .panel-head {
+        padding: 13px;
     }
 
-    #map,
-    #hydro-chart {
-        height: 480px;
-        flex: none;
+    .panel-head h3 {
+        font-size: 14px;
+    }
+
+    .flood-grid,
+    .inundaciones-grid,
+    .scenarios-grid,
+    .mapas-grid {
+
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
     }
 
 }
 
 
 /* =====================================================
-   MÓVILES
+   16. TABLETS VERTICALES
+===================================================== */
+
+@media (max-width: 900px) {
+
+    .monitoring-layout {
+
+        grid-template-columns: 1fr;
+
+    }
+
+    .map-panel,
+    .hydro-panel {
+
+        min-height: 550px;
+
+    }
+
+    #map,
+    #hydro-chart {
+
+        height: 480px;
+
+        flex: none;
+
+    }
+
+    .flood-grid,
+    .inundaciones-grid,
+    .scenarios-grid,
+    .mapas-grid {
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+}
+
+
+/* =====================================================
+   17. MÓVILES
 ===================================================== */
 
 @media (max-width: 650px) {
 
     .topbar {
+
         padding: 15px;
+
         align-items: flex-start;
+
         gap: 10px;
     }
 
@@ -466,6 +636,10 @@ footer {
 
     .eyebrow {
         font-size: 9px;
+    }
+
+    .header-right {
+        align-items: flex-end;
     }
 
     .status,
@@ -486,18 +660,24 @@ footer {
     }
 
     .monitoring-layout {
+
         grid-template-columns: 1fr;
+
         gap: 10px;
     }
 
     .map-panel,
     .hydro-panel {
+
         min-height: auto;
     }
 
     .panel-head {
+
         align-items: flex-start;
+
         flex-direction: column;
+
         padding: 13px;
     }
 
@@ -506,14 +686,20 @@ footer {
     }
 
     #map {
+
         height: 430px;
+
         min-height: 430px;
+
         flex: none;
     }
 
     #hydro-chart {
+
         height: 390px;
+
         min-height: 390px;
+
         flex: none;
     }
 
@@ -521,17 +707,16 @@ footer {
         align-self: flex-start;
     }
 
+    .flood-grid,
+    .inundaciones-grid,
+    .scenarios-grid,
+    .mapas-grid {
+
+        grid-template-columns: 1fr;
+    }
+
     footer {
         font-size: 10px;
     }
 
-}
-/* ESCENARIOS DE INUNDACIÓN: ANCHO COMPLETO */
-
-.flood-section,
-.inundaciones-section,
-#flood-section {
-    width: 100%;
-    max-width: none;
-    grid-column: 1 / -1;
 }
