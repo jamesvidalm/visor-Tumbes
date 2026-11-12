@@ -1,4 +1,15 @@
 
+// ============================================================
+// APP.JS - DASHBOARD HIDROLOGICO CUENCA DEL RIO TUMBES
+// ============================================================
+// - Carga Excel de caudales.
+// - Carga Excel de ubicaciones.
+// - Verifica las columnas necesarias.
+// - Inicializa estaciones El Tigre y Cabo Inga.
+// - Carga las 10 quebradas mediante CONFIG.quebradas.
+// - Permite actualizar el hidrograma al seleccionar elementos.
+// ============================================================
+
 
 // ============================================================
 // 1. CARGAR ARCHIVOS EXCEL
@@ -25,7 +36,9 @@ async function loadWorkbook(path, sheetName) {
         wb.Sheets[wb.SheetNames[0]];
 
     if (!sheet) {
-        throw new Error("No se encontró la hoja: " + sheetName);
+        throw new Error(
+            "No se encontró la hoja: " + sheetName
+        );
     }
 
     return XLSX.utils.sheet_to_json(sheet, {
@@ -51,19 +64,61 @@ function setText(id, value) {
 
 
 // ============================================================
-// 3. INICIALIZAR DASHBOARD
+// 3. NORMALIZAR NOMBRES
+// ============================================================
+
+function normalizeName(value) {
+
+    return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .trim();
+
+}
+
+
+// ============================================================
+// 4. INICIALIZAR DASHBOARD
 // ============================================================
 
 async function startDashboard() {
 
     try {
 
-        console.log("Iniciando dashboard...");
+        console.log("==================================");
+        console.log("INICIANDO DASHBOARD TUMBES");
+        console.log("==================================");
 
 
         // ----------------------------------------------------
-        // 3.1 CARGAR DATOS
+        // 4.1 VERIFICAR CONFIGURACIÓN
         // ----------------------------------------------------
+
+        if (!window.CONFIG) {
+            throw new Error(
+                "No se encontró window.CONFIG. Verifica js/data.js."
+            );
+        }
+
+        if (!Array.isArray(CONFIG.puntos)) {
+            throw new Error(
+                "CONFIG.puntos no está correctamente definido."
+            );
+        }
+
+        if (!Array.isArray(CONFIG.quebradas)) {
+            throw new Error(
+                "CONFIG.quebradas no está correctamente definido."
+            );
+        }
+
+
+        // ----------------------------------------------------
+        // 4.2 CARGAR DATOS EXCEL
+        // ----------------------------------------------------
+
+        console.log("Cargando archivos Excel...");
 
         const [flows, locations] = await Promise.all([
 
@@ -86,19 +141,29 @@ async function startDashboard() {
             );
         }
 
+        if (!locations.length) {
+            throw new Error(
+                "El Excel de ubicaciones no contiene registros."
+            );
+        }
+
 
         // ----------------------------------------------------
-        // 3.2 VERIFICAR COLUMNAS
+        // 4.3 VERIFICAR COLUMNAS DEL EXCEL
         // ----------------------------------------------------
 
         const headers = Object.keys(flows[0]);
 
         const required = [
+
+            // Estaciones principales
             "fecha",
             "Q_TIGRE",
             "Q_TIGRE_P",
             "Q_CABOINGA",
             "Q_CABOINGA_P",
+
+            // Quebradas existentes
             "QD_HIGUERON",
             "QD_CABUYAL",
             "QD_VAQUERIA",
@@ -106,44 +171,45 @@ async function startDashboard() {
             "QD_ELTIGRE",
             "QD_JARDINA",
             "QD_CABEZADETORO",
-            "QD_CORRALES"
+            "QD_CORRALES",
+
+            // NUEVAS QUEBRADAS
+            "QD_CAZADEROS",
+            "QD_OZUMARES"
+
         ];
 
+
         const missing = required.filter(
-            c => !headers.includes(c)
+            column => !headers.includes(column)
         );
+
 
         if (missing.length) {
 
             throw new Error(
-                "Faltan columnas en el Excel: " +
+                "Faltan columnas en el Excel de caudales: " +
                 missing.join(", ")
             );
 
         }
 
 
-        // ----------------------------------------------------
-        // 3.3 NORMALIZAR NOMBRES
-        // ----------------------------------------------------
-
-        const norm = s =>
-            String(s || "")
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .toUpperCase()
-                .trim();
+        console.log("Columnas del Excel verificadas.");
 
 
         // ----------------------------------------------------
-        // 3.4 OBTENER COORDENADAS DE ESTACIONES
+        // 4.4 OBTENER COORDENADAS DE ESTACIONES
         // ----------------------------------------------------
 
         const points = CONFIG.puntos.map(p => {
 
             const row = locations.find(
-                r => norm(r.ID) === norm(p.id)
+                r =>
+                    normalizeName(r.ID) ===
+                    normalizeName(p.id)
             );
+
 
             if (!row) {
 
@@ -154,8 +220,10 @@ async function startDashboard() {
 
             }
 
+
             const lat = Number(row.Lat);
             const lon = Number(row.Long);
+
 
             if (
                 !Number.isFinite(lat) ||
@@ -169,6 +237,7 @@ async function startDashboard() {
 
             }
 
+
             return {
                 ...p,
                 lat,
@@ -179,10 +248,15 @@ async function startDashboard() {
 
 
         // ----------------------------------------------------
-        // 3.5 FUNCIÓN PARA SELECCIONAR ESTACIONES
+        // 4.5 FUNCIÓN PARA SELECCIONAR ESTACIONES Y QUEBRADAS
         // ----------------------------------------------------
 
         const select = item => {
+
+            console.log(
+                "Elemento seleccionado:",
+                item.nombre || item.id
+            );
 
             renderHydrograph(item, flows);
 
@@ -190,29 +264,78 @@ async function startDashboard() {
 
 
         // ----------------------------------------------------
-        // 3.6 INICIALIZAR MAPA
+        // 4.6 INICIALIZAR MAPA
         // ----------------------------------------------------
+
+        console.log("Inicializando mapa...");
 
         const map = initMap(points, select);
 
 
+        if (!map) {
+            throw new Error(
+                "No se pudo inicializar el mapa."
+            );
+        }
+
+
         // ----------------------------------------------------
-        // 3.7 CARGAR POLÍGONOS DE QUEBRADAS
+        // 4.7 CARGAR LOS POLÍGONOS DE LAS 10 QUEBRADAS
         // ----------------------------------------------------
+
+        console.log("Cargando quebradas...");
+
+        console.log(
+            "Número de quebradas configuradas:",
+            CONFIG.quebradas.length
+        );
+
 
         await addPolygons(map, select);
 
 
         // ----------------------------------------------------
-        // 3.8 FINALIZAR
+        // 4.8 INFORMACIÓN FINAL
         // ----------------------------------------------------
 
+        console.log("");
         console.log("==================================");
         console.log("DASHBOARD CARGADO CORRECTAMENTE");
-        console.log("Registros horarios:", flows.length);
-        console.log("Estaciones:", points.length);
-        console.log("Polígonos:", CONFIG.quebradas.length);
-        console.log("Inicio del pronóstico:", CONFIG.inicioPronostico);
+        console.log("==================================");
+
+        console.log(
+            "Registros horarios:",
+            flows.length
+        );
+
+        console.log(
+            "Estaciones:",
+            points.length
+        );
+
+        console.log(
+            "Quebradas configuradas:",
+            CONFIG.quebradas.length
+        );
+
+        CONFIG.quebradas.forEach((q, index) => {
+
+            console.log(
+                (index + 1) + ". " +
+                q.nombre +
+                " | " +
+                q.columna +
+                " | " +
+                q.archivo
+            );
+
+        });
+
+        console.log(
+            "Inicio del pronóstico:",
+            CONFIG.inicioPronostico
+        );
+
         console.log("==================================");
 
 
@@ -228,13 +351,18 @@ async function startDashboard() {
             "Error: " + err.message
         );
 
+        setText(
+            "data-status",
+            "Error de lectura"
+        );
+
     }
 
 }
 
 
 // ============================================================
-// 4. EJECUTAR CUANDO SE CARGUE EL HTML
+// 5. EJECUTAR CUANDO SE CARGUE EL HTML
 // ============================================================
 
 document.addEventListener(
