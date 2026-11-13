@@ -8,7 +8,7 @@ window.CONFIG = {
     hojaCaudales: "Hoja1",
     hojaUbicaciones: "Ubicacion",
 
-    inicioPronostico: "2026-11-13T02:00:00-05:00",
+    inicioPronostico: "2026-11-13T08:00:00-05:00",
 
     // PRONÓSTICO DE LLUVIA GFS EN JSON
     gfsFile: "data/rainGFS/GFS_TUMBES_20261112_12UTC.json",
