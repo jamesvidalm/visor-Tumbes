@@ -1,3 +1,20 @@
+
+// ============================================================
+// MAPAS DE INUNDACION - CUENCA DEL RIO TUMBES
+// ============================================================
+// VERSION: SECCION DESACTIVADA
+//
+// TODO EL CODIGO ORIGINAL SE CONSERVA.
+// NO SE ELIMINA NINGUNA FUNCION.
+// ============================================================
+
+
+// ============================================================
+// DESACTIVAR CODIGO ORIGINAL
+// ============================================================
+
+if (false) {
+
 /* ============================================================
    MAPAS DE INUNDACION - CUENCA DEL RIO TUMBES
 
@@ -822,3 +839,40 @@ window.renderFloodImages = async function (item, rows) {
     }
 
 };
+
+} // FIN DEL CODIGO ORIGINAL DESACTIVADO
+
+
+// ============================================================
+// 13. CONFIGURACION DE DESACTIVACION
+// ============================================================
+
+// Mantener variables globales sin ejecutar el codigo anterior.
+
+window.FLOOD_MANIFEST = null;
+window.FLOOD_MAPS = [];
+window.FLOOD_BREAKS = null;
+
+
+// ============================================================
+// 14. FUNCION DE COMPATIBILIDAD
+// ============================================================
+
+// Si app.js u otro archivo intenta llamar a esta funcion,
+// no se generaran mapas ni leyendas.
+
+window.renderFloodImages = async function (item, rows) {
+
+    console.log(
+        "Mapas de inundacion desactivados temporalmente."
+    );
+
+    return;
+
+};
+
+// ============================================================
+// FIN DE INUNDACIONES.JS
+// CODIGO ORIGINAL CONSERVADO Y DESACTIVADO
+// ============================================================
+
